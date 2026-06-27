@@ -94,6 +94,9 @@ jobs:
           CFLAGS: -fuse-ld=lld
           LDFLAGS: -fuse-ld=lld
         with:
+          use-cargo-nextest: true
+          with-default-features: true
+          features: test-util
           output-path: lcov.info
           format: lcov
       - name: Upload coverage data to CodeScene
