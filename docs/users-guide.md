@@ -1,14 +1,47 @@
 # User Guide
 
-This guide explains how to use the generated Monotony project after
-rendering it from the template.
+This guide explains how to use Monotony in Rust crates that need deterministic
+elapsed-time measurement.
+
+## Clock Abstraction
+
+Monotony exposes a narrow `MonotonicClock` trait over `std::time::Instant`.
+Inject the trait into code that measures durations so production code can use
+`StdMonotonicClock` while tests provide deterministic time.
+
+```rust
+use monotony::{MonotonicClock, StdMonotonicClock};
+
+fn measure(clock: &dyn MonotonicClock) -> std::time::Duration {
+    let started_at = clock.now();
+    clock.now().duration_since(started_at)
+}
+
+let elapsed = measure(&StdMonotonicClock);
+assert!(elapsed >= std::time::Duration::ZERO);
+```
+
+## Test Utilities
+
+Test helpers are available behind the `test-util` feature. They are not hidden
+behind `#[cfg(test)]`, so downstream crates can enable them in their own
+`dev-dependencies`.
+
+```toml
+[dev-dependencies]
+monotony = { version = "0.1.0", features = ["test-util"] }
+```
+
+Use `FixedMonotonicClock::with_elapsed(...)` for code that calls `now()`
+exactly twice. Use `QueuedMonotonicClock::from_instants(...)` when a test needs
+several pre-seeded instants. Use `ManualMonotonicClock::advance(...)` for
+polling loops and timeout code where the test should explicitly move time
+between observations.
 
 ## Generated Tooling
 
-Generated projects use Rust 2024, a pinned nightly toolchain, strict lint
-settings, and documented starter code. Library projects render `src/lib.rs`.
-Application projects render `src/main.rs`, `src/lib.rs`, release automation,
-and `[package.metadata.binstall]` metadata for binary installation.
+Monotony uses Rust 2024, a pinned nightly toolchain, strict lint settings, and
+documented library code.
 
 Development builds use Cranelift for debug code generation. On Linux targets,
 `.cargo/config.toml` configures clang to link with `mold` so local debug builds

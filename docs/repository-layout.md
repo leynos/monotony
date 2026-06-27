@@ -1,8 +1,8 @@
 # Repository layout
 
-This document describes the generated Monotony repository layout. It
-is the canonical reference for where source code, tests, configuration,
-automation, and long-lived documentation belong.
+This document describes the generated Monotony repository layout. It is the
+canonical reference for where source code, tests, configuration, automation,
+and long-lived documentation belong.
 
 ## Top-level tree
 
@@ -28,9 +28,10 @@ compact and omits build output such as `target/`.
 ├── src/
 
 │   └── lib.rs
+│   └── test_util.rs
 
 ├── tests/
-│   └── stub.rs
+│   └── clock.rs
 ├── AGENTS.md
 ├── Cargo.toml
 ├── LICENSE
@@ -62,13 +63,15 @@ compact and omits build output such as `target/`.
 - `docs/repository-layout.md`: Documents the repository tree and path
   responsibilities.
 
-- `src/lib.rs`: Contains the library crate root and exported public API
-  surface.
+- `src/lib.rs`: Contains the library crate root and exported production public
+  API surface.
+- `src/test_util.rs`: Contains deterministic clock helpers exposed by the
+  `test-util` feature for downstream tests.
 
 - `tests/`: Holds integration and behavioural tests that exercise public
   behaviour.
-- `tests/stub.rs`: Keeps the generated test directory valid until real tests
-  replace it.
+- `tests/clock.rs`: Exercises the public monotonic clock API and feature-gated
+  test utilities.
 - `AGENTS.md`: Provides repository-specific working instructions for agents and
   contributors.
 - `Cargo.toml`: Defines package metadata, dependencies, lint policy, and Cargo
@@ -88,6 +91,9 @@ compact and omits build output such as `target/`.
 
 - Keep generated source code under `src/`. Add modules below `src/` when a
   feature grows beyond a small entrypoint or crate root.
+- Keep reusable deterministic test helpers behind the `test-util` feature so
+  downstream crates can opt into them without relying on private `#[cfg(test)]`
+  items.
 - Keep black-box integration tests and externally observable workflow tests
   under `tests/`.
 - Keep reusable documentation under `docs/`. Update `docs/contents.md` whenever

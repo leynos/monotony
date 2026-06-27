@@ -10,7 +10,15 @@ readme = "README.md"
 keywords = ["trait", "testing", "clock", "timing", "monotonic"]
 categories = ["development-tools"]
 
+[features]
+default = []
+test-util = []
+
 [dependencies]
+
+[dev-dependencies]
+proptest = { version = "1.11.0", default-features = false, features = ["std"] }
+rstest = "0.26.1"
 
 [lints.clippy]
 pedantic = { level = "warn", priority = -1 }
