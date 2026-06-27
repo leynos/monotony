@@ -93,13 +93,7 @@ impl QueuedMonotonicClock {
         &self,
         operation: impl FnOnce(&mut VecDeque<Instant>) -> Output,
     ) -> Output {
-        match self.instants.lock() {
-            Ok(mut guard) => operation(&mut guard),
-            Err(poisoned) => {
-                let mut guard = poisoned.into_inner();
-                operation(&mut guard)
-            }
-        }
+        with_mutex(&self.instants, operation)
     }
 }
 
@@ -161,18 +155,22 @@ impl ManualMonotonicClock {
     }
 
     fn with_current<Output>(&self, operation: impl FnOnce(&mut Instant) -> Output) -> Output {
-        match self.current.lock() {
-            Ok(mut guard) => operation(&mut guard),
-            Err(poisoned) => {
-                let mut guard = poisoned.into_inner();
-                operation(&mut guard)
-            }
-        }
+        with_mutex(&self.current, operation)
     }
 }
 
 impl MonotonicClock for ManualMonotonicClock {
     fn now(&self) -> Instant { self.with_current(|current| *current) }
+}
+
+fn with_mutex<T, Output>(mutex: &Mutex<T>, operation: impl FnOnce(&mut T) -> Output) -> Output {
+    match mutex.lock() {
+        Ok(mut guard) => operation(&mut guard),
+        Err(poisoned) => {
+            let mut guard = poisoned.into_inner();
+            operation(&mut guard)
+        }
+    }
 }
 
 fn add_duration(instant: Instant, duration: Duration) -> Instant {
