@@ -1,4 +1,4 @@
-.PHONY: help all clean test build release coverage lint fmt check-fmt markdownlint nixie audit rust-audit
+.PHONY: help all clean test test-fast build release coverage lint fmt check-fmt markdownlint nixie audit rust-audit
 
 SHELL := bash
 
@@ -17,6 +17,11 @@ CARGO_FLAGS ?= --all-targets --all-features
 CLIPPY_FLAGS ?= $(CARGO_FLAGS) -- $(RUST_FLAGS)
 TEST_FLAGS ?= $(CARGO_FLAGS)
 TEST_CMD := $(if $(shell $(CARGO) nextest --version 2>/dev/null),nextest run,test)
+TEST_LINKER ?=
+TEST_LINKER_FLAG :=
+ifeq ($(TEST_LINKER),mold)
+TEST_LINKER_FLAG := -C link-arg=-fuse-ld=mold
+endif
 COVERAGE_LINKER_FLAGS ?= -fuse-ld=lld
 COVERAGE_RUST_FLAGS ?= $(RUST_FLAGS) -C link-arg=$(COVERAGE_LINKER_FLAGS)
 MDLINT ?= markdownlint-cli2
@@ -32,8 +37,18 @@ clean: ## Remove build artifacts
 	$(CARGO) clean
 
 test: ## Run tests with warnings treated as errors
-	RUSTFLAGS="$(RUST_FLAGS)" $(CARGO) $(TEST_CMD) $(TEST_FLAGS) $(BUILD_JOBS)
-	RUSTFLAGS="$(RUST_FLAGS)" $(CARGO) test --doc --workspace --all-features
+ifeq ($(TEST_LINKER),mold)
+	@command -v mold >/dev/null || { echo "mold is not installed or not on PATH"; exit 1; }
+endif
+	CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=clang \
+		RUSTFLAGS="$(RUST_FLAGS) $(TEST_LINKER_FLAG)" \
+		$(CARGO) $(TEST_CMD) $(TEST_FLAGS) $(BUILD_JOBS)
+	CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=clang \
+		RUSTFLAGS="$(RUST_FLAGS) $(TEST_LINKER_FLAG)" \
+		$(CARGO) test --doc --workspace --all-features
+
+test-fast: ## Run tests with mold for faster local linking
+	$(MAKE) test TEST_LINKER=mold
 
 target/%/$(TARGET): ## Build binary in debug or release mode
 	$(CARGO) build $(BUILD_JOBS) $(if $(findstring release,$(@)),--release)

@@ -1,8 +1,8 @@
 # Repository layout
 
-This document describes the generated Monotony repository layout. It
-is the canonical reference for where source code, tests, configuration,
-automation, and long-lived documentation belong.
+This document describes the generated Monotony repository layout. It is the
+canonical reference for where source code, tests, configuration, automation,
+and long-lived documentation belong.
 
 ## Top-level tree
 
@@ -21,16 +21,21 @@ compact and omits build output such as `target/`.
 
 ├── docs/
 │   ├── contents.md
+│   ├── clock-design.md
 │   ├── developers-guide.md
 │   ├── repository-layout.md
 │   ├── users-guide.md
 │   └── ...
 ├── src/
 
-│   └── lib.rs
+│   ├── lib.rs
+│   └── test_util.rs
 
 ├── tests/
-│   └── stub.rs
+│   ├── clock.rs
+│   ├── compile_time.rs
+│   ├── users_guide_examples.rs
+│   └── trybuild/
 ├── AGENTS.md
 ├── Cargo.toml
 ├── LICENSE
@@ -55,6 +60,8 @@ compact and omits build output such as `target/`.
   design material.
 - `docs/contents.md`: Indexes the documentation set and should be updated when
   documentation files are added, renamed, or removed.
+- `docs/clock-design.md`: Records the architectural rationale for the clock
+  abstraction and `test-util` feature boundary.
 - `docs/users-guide.md`: Explains how to use the generated project and its
   public build and test commands.
 - `docs/developers-guide.md`: Explains the contributor workflow and local
@@ -62,13 +69,20 @@ compact and omits build output such as `target/`.
 - `docs/repository-layout.md`: Documents the repository tree and path
   responsibilities.
 
-- `src/lib.rs`: Contains the library crate root and exported public API
-  surface.
+- `src/lib.rs`: Contains the library crate root and exported production public
+  API surface.
+- `src/test_util.rs`: Contains deterministic clock helpers exposed by the
+  `test-util` feature for downstream tests.
 
-- `tests/`: Holds integration and behavioural tests that exercise public
-  behaviour.
-- `tests/stub.rs`: Keeps the generated test directory valid until real tests
-  replace it.
+- `tests/`: Holds integration, behavioural, and compile-time contract tests
+  that exercise public behaviour.
+- `tests/clock.rs`: Exercises the public monotonic clock API and feature-gated
+  test utilities.
+- `tests/compile_time.rs`: Runs `trybuild` compile-time API contract tests.
+- `tests/users_guide_examples.rs`: Exercises code examples from the users'
+  guide.
+- `tests/trybuild/`: Contains downstream crate fixtures for compile-time API
+  contracts.
 - `AGENTS.md`: Provides repository-specific working instructions for agents and
   contributors.
 - `Cargo.toml`: Defines package metadata, dependencies, lint policy, and Cargo
@@ -86,8 +100,19 @@ compact and omits build output such as `target/`.
 
 ## Ownership boundaries
 
+Production code must remain dependency-free. The core crate surface is limited
+to the `MonotonicClock` trait and the `StdMonotonicClock` adapter.
+
+Reusable deterministic clocks live in `src/test_util.rs` and are exposed only
+through the `test-util` feature. Keep helpers in that module when they are
+intended for downstream crate tests; keep private test-only fixtures inside
+individual test modules when they are useful only to Monotony's own tests.
+
 - Keep generated source code under `src/`. Add modules below `src/` when a
   feature grows beyond a small entrypoint or crate root.
+- Keep reusable deterministic test helpers behind the `test-util` feature, so
+  downstream crates can opt into them without relying on private `#[cfg(test)]`
+  items.
 - Keep black-box integration tests and externally observable workflow tests
   under `tests/`.
 - Keep reusable documentation under `docs/`. Update `docs/contents.md` whenever
