@@ -83,6 +83,21 @@ pub struct QueuedMonotonicClock {
 impl QueuedMonotonicClock {
     /// Creates a clock that returns `instants` in iteration order.
     ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::time::{Duration, Instant};
+    ///
+    /// use monotony::{MonotonicClock, test_util::QueuedMonotonicClock};
+    ///
+    /// let first = Instant::now();
+    /// let second = first + Duration::from_millis(50);
+    /// let clock = QueuedMonotonicClock::from_instants([first, second]);
+    ///
+    /// assert_eq!(clock.now(), first);
+    /// assert_eq!(clock.now(), second);
+    /// ```
+    ///
     /// # Panics
     ///
     /// Panics if `instants` contains an instant earlier than the instant before

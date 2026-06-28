@@ -17,11 +17,12 @@ individual test modules when they are useful only to Monotony's own tests.
 Use `make all` as the public entrypoint for formatting, linting, and tests.
 `make lint` runs rustdoc, Clippy, and Whitaker. `make test` prefers
 `cargo nextest run` and falls back to `cargo test` when cargo-nextest is not
-available. Compile-time API contracts live under `tests/trybuild/` and run
-through the same test entrypoint with `trybuild`. `make audit` derives the Rust
-workspace root with `cargo metadata`, logs workspace member manifests, and runs
-`cargo audit` once from the workspace root. `make coverage` uses
-`cargo llvm-cov` with `lld`.
+available. Use `make test-fast` to run the same test entrypoint with the opt-in
+`mold` linker route for local test builds. Compile-time API contracts live under
+`tests/trybuild/` and run through the same test entrypoint with `trybuild`.
+`make audit` derives the Rust workspace root with `cargo metadata`, logs
+workspace member manifests, and runs `cargo audit` once from the workspace root.
+`make coverage` uses `cargo llvm-cov` with `lld`.
 
 GitHub Actions Act validation lives in `.github/workflows/act-validation.yml`.
 The main `.github/workflows/ci.yml` workflow deliberately does not run
@@ -31,9 +32,10 @@ container-backed checks in parallel.
 ## Tooling
 
 Development builds use Cranelift for debug code generation. On Linux targets,
-`.cargo/config.toml` configures clang to link with `mold` so debug builds link
-quickly. Coverage generation uses `lld` because LLVM coverage tooling expects
-LLVM-compatible linker behaviour.
+`.cargo/config.toml` configures clang with the repository's LLD baseline.
+`make test-fast` opts into `mold` for faster local test linking. Coverage
+generation uses `lld` because LLVM coverage tooling expects LLVM-compatible
+linker behaviour.
 
 Install `clang`, `lld`, `mold`, `python3`, and `cargo-audit` before running the
 full generated workflow locally on Linux.

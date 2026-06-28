@@ -1,0 +1,13 @@
+error[E0432]: unresolved import `monotony::test_util`
+ --> tests/trybuild/test_util_requires_feature.rs:3:5
+  |
+3 | use monotony::test_util;
+  |     ^^^^^^^^^^^^^^^^^^^ no `test_util` in the root
+  |
+note: found an item that was configured out
+ --> src/lib.rs
+  |
+  | #[cfg(feature = "test-util")]
+  |       --------------------- the item is gated behind the `test-util` feature
+  | pub mod test_util;
+  |         ^^^^^^^^^

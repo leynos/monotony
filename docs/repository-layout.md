@@ -31,7 +31,9 @@ compact and omits build output such as `target/`.
 │   └── test_util.rs
 
 ├── tests/
-│   └── clock.rs
+│   ├── clock.rs
+│   ├── compile_time.rs
+│   └── trybuild/
 ├── AGENTS.md
 ├── Cargo.toml
 ├── LICENSE
@@ -68,10 +70,13 @@ compact and omits build output such as `target/`.
 - `src/test_util.rs`: Contains deterministic clock helpers exposed by the
   `test-util` feature for downstream tests.
 
-- `tests/`: Holds integration and behavioural tests that exercise public
-  behaviour.
+- `tests/`: Holds integration, behavioural, and compile-time contract tests
+  that exercise public behaviour.
 - `tests/clock.rs`: Exercises the public monotonic clock API and feature-gated
   test utilities.
+- `tests/compile_time.rs`: Runs `trybuild` compile-time API contract tests.
+- `tests/trybuild/`: Contains downstream crate fixtures for compile-time API
+  contracts.
 - `AGENTS.md`: Provides repository-specific working instructions for agents and
   contributors.
 - `Cargo.toml`: Defines package metadata, dependencies, lint policy, and Cargo
