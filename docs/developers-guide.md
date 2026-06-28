@@ -17,9 +17,11 @@ individual test modules when they are useful only to Monotony's own tests.
 Use `make all` as the public entrypoint for formatting, linting, and tests.
 `make lint` runs rustdoc, Clippy, and Whitaker. `make test` prefers
 `cargo nextest run` and falls back to `cargo test` when cargo-nextest is not
-available. `make audit` derives the Rust workspace root with `cargo metadata`,
-logs workspace member manifests, and runs `cargo audit` once from the workspace
-root. `make coverage` uses `cargo llvm-cov` with `lld`.
+available. Compile-time API contracts live under `tests/trybuild/` and run
+through the same test entrypoint with `trybuild`. `make audit` derives the Rust
+workspace root with `cargo metadata`, logs workspace member manifests, and runs
+`cargo audit` once from the workspace root. `make coverage` uses
+`cargo llvm-cov` with `lld`.
 
 GitHub Actions Act validation lives in `.github/workflows/act-validation.yml`.
 The main `.github/workflows/ci.yml` workflow deliberately does not run
