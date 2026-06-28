@@ -2,6 +2,10 @@
 
 This guide explains the contributor workflow for the Monotony project.
 
+Architectural rationale for the clock abstraction and the `test-util` feature
+boundary lives in [clock design](clock-design.md). Path ownership and
+repository boundaries live in [repository layout](repository-layout.md).
+
 ## Local Workflow
 
 Use `make all` as the public entrypoint for formatting, linting, and tests.

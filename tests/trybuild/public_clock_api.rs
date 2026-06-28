@@ -1,3 +1,5 @@
+//! Compile-time contract for the public clock trait and standard clock API.
+
 use std::time::Instant;
 
 use monotony::{MonotonicClock, StdMonotonicClock};

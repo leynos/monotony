@@ -21,6 +21,7 @@ compact and omits build output such as `target/`.
 
 ├── docs/
 │   ├── contents.md
+│   ├── clock-design.md
 │   ├── developers-guide.md
 │   ├── repository-layout.md
 │   ├── users-guide.md
@@ -59,6 +60,8 @@ compact and omits build output such as `target/`.
   design material.
 - `docs/contents.md`: Indexes the documentation set and should be updated when
   documentation files are added, renamed, or removed.
+- `docs/clock-design.md`: Records the architectural rationale for the clock
+  abstraction and `test-util` feature boundary.
 - `docs/users-guide.md`: Explains how to use the generated project and its
   public build and test commands.
 - `docs/developers-guide.md`: Explains the contributor workflow and local

@@ -1,3 +1,5 @@
+//! Compile-time contract for the feature-gated deterministic clock API.
+
 use std::time::{Duration, Instant};
 
 use monotony::{
