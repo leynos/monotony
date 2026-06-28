@@ -33,6 +33,7 @@ compact and omits build output such as `target/`.
 ├── tests/
 │   ├── clock.rs
 │   ├── compile_time.rs
+│   ├── users_guide_examples.rs
 │   └── trybuild/
 ├── AGENTS.md
 ├── Cargo.toml
@@ -75,6 +76,8 @@ compact and omits build output such as `target/`.
 - `tests/clock.rs`: Exercises the public monotonic clock API and feature-gated
   test utilities.
 - `tests/compile_time.rs`: Runs `trybuild` compile-time API contract tests.
+- `tests/users_guide_examples.rs`: Exercises code examples from the users'
+  guide.
 - `tests/trybuild/`: Contains downstream crate fixtures for compile-time API
   contracts.
 - `AGENTS.md`: Provides repository-specific working instructions for agents and
