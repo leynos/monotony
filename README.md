@@ -1,27 +1,105 @@
 # Monotony
 
-Monotony is a low-dependency Rust microcrate for injecting monotonic clocks. It
-exposes a small `MonotonicClock` trait over `std::time::Instant`, a production
-`StdMonotonicClock`, and feature-gated deterministic clocks for downstream
-tests.
+*Ticking away the moments that make up a dull day.*
 
-```rust
-use monotony::{MonotonicClock, StdMonotonicClock};
+Monotony is a small Rust crate for injecting monotonic clocks. It gives
+production code a narrow `MonotonicClock` trait over `std::time::Instant`, and
+gives tests deterministic clocks without reaching for `#[cfg(test)]` internals.
 
-let clock = StdMonotonicClock;
-let started_at = clock.now();
-let elapsed = clock.now().duration_since(started_at);
+______________________________________________________________________
+
+## Why monotony?
+
+- **Keep time injectable:** Measure elapsed time without coupling business
+  logic directly to `Instant::now()`.
+- **Mock time downstream:** Enable the `test-util` feature from your own
+  crate's dev-dependencies and use deterministic clocks in integration tests.
+- **Stay small:** The production crate surface is dependency-free and focused
+  on one job.
+
+______________________________________________________________________
+
+## Quick start
+
+### Installation
+
+```toml
+[dependencies]
+monotony = "0.1.0"
 ```
 
-Enable the `test-util` feature to use deterministic clocks:
+Enable deterministic clocks for tests:
 
 ```toml
 [dev-dependencies]
 monotony = { version = "0.1.0", features = ["test-util"] }
 ```
 
-## Documentation
+### Basic usage
 
-- [Documentation contents](docs/contents.md)
-- [User guide](docs/users-guide.md)
-- [Developer guide](docs/developers-guide.md)
+```rust
+use std::time::Duration;
+
+use monotony::{MonotonicClock, StdMonotonicClock};
+
+fn measure(clock: &dyn MonotonicClock) -> Duration {
+    let started_at = clock.now();
+    clock.now().duration_since(started_at)
+}
+
+let elapsed = measure(&StdMonotonicClock);
+assert!(elapsed >= Duration::ZERO);
+```
+
+### Mocking time
+
+```rust
+use std::time::Duration;
+
+use monotony::{MonotonicClock, test_util::FixedMonotonicClock};
+
+fn measure(clock: &dyn MonotonicClock) -> Duration {
+    let started_at = clock.now();
+    clock.now().duration_since(started_at)
+}
+
+let clock = FixedMonotonicClock::with_elapsed(Duration::from_secs(3));
+
+assert_eq!(measure(&clock), Duration::from_secs(3));
+```
+
+______________________________________________________________________
+
+## Features
+
+- `MonotonicClock` trait for elapsed-time measurement.
+- `StdMonotonicClock` production adapter backed by `Instant::now()`.
+- `FixedMonotonicClock` for exactly two `now()` calls in simple tests.
+- `QueuedMonotonicClock` for deterministic sequences of instants.
+- `ManualMonotonicClock` for tests that explicitly advance time.
+- `trybuild`, doctest, property, and runtime coverage for the public contract.
+
+______________________________________________________________________
+
+## Learn more
+
+- [Documentation contents](docs/contents.md) — full documentation index.
+- [Users' guide](docs/users-guide.md) — usage, test helpers, and Make targets.
+- [Developers' guide](docs/developers-guide.md) — contributor workflow and
+  local tooling.
+- [Repository layout](docs/repository-layout.md) — path responsibilities and
+  ownership boundaries.
+
+______________________________________________________________________
+
+## Licence
+
+ISC — see [LICENSE](LICENSE) for details.
+
+______________________________________________________________________
+
+## Contributing
+
+Contributions are welcome. Please see [AGENTS.md](AGENTS.md) and the
+[developers' guide](docs/developers-guide.md) for the local workflow and
+quality gates.
