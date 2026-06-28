@@ -1,7 +1,7 @@
 error[E0432]: unresolved import `monotony::test_util`
- --> tests/trybuild/test_util_requires_feature.rs:3:5
+ --> tests/trybuild/test_util_requires_feature.rs:5:5
   |
-3 | use monotony::test_util;
+5 | use monotony::test_util;
   |     ^^^^^^^^^^^^^^^^^^^ no `test_util` in the root
   |
 note: found an item that was configured out

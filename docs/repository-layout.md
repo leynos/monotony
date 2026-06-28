@@ -94,6 +94,14 @@ compact and omits build output such as `target/`.
 
 ## Ownership boundaries
 
+Production code must remain dependency-free. The core crate surface is limited
+to the `MonotonicClock` trait and the `StdMonotonicClock` adapter.
+
+Reusable deterministic clocks live in `src/test_util.rs` and are exposed only
+through the `test-util` feature. Keep helpers in that module when they are
+intended for downstream crate tests; keep private test-only fixtures inside
+individual test modules when they are useful only to Monotony's own tests.
+
 - Keep generated source code under `src/`. Add modules below `src/` when a
   feature grows beyond a small entrypoint or crate root.
 - Keep reusable deterministic test helpers behind the `test-util` feature, so

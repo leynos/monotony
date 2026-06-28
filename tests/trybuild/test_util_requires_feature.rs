@@ -1,3 +1,5 @@
+//! Compile-fail contract for using `test_util` without the `test-util` feature.
+
 use std::time::Instant;
 
 use monotony::test_util;

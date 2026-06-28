@@ -2,16 +2,6 @@
 
 This guide explains the contributor workflow for the Monotony project.
 
-## Crate Boundaries
-
-Production code must remain dependency-free. The core crate surface is limited
-to the `MonotonicClock` trait and the `StdMonotonicClock` adapter.
-
-Reusable deterministic clocks live in `src/test_util.rs` and are exposed only
-through the `test-util` feature. Keep helpers in that module when they are
-intended for downstream crate tests; keep private test-only fixtures inside
-individual test modules when they are useful only to Monotony's own tests.
-
 ## Local Workflow
 
 Use `make all` as the public entrypoint for formatting, linting, and tests.
