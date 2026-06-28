@@ -27,7 +27,7 @@ compact and omits build output such as `target/`.
 │   └── ...
 ├── src/
 
-│   └── lib.rs
+│   ├── lib.rs
 │   └── test_util.rs
 
 ├── tests/
@@ -91,7 +91,7 @@ compact and omits build output such as `target/`.
 
 - Keep generated source code under `src/`. Add modules below `src/` when a
   feature grows beyond a small entrypoint or crate root.
-- Keep reusable deterministic test helpers behind the `test-util` feature so
+- Keep reusable deterministic test helpers behind the `test-util` feature, so
   downstream crates can opt into them without relying on private `#[cfg(test)]`
   items.
 - Keep black-box integration tests and externally observable workflow tests

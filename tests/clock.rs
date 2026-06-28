@@ -54,6 +54,15 @@ fn queued_clock_panics_when_no_instants_remain() {
     let _exhausted = clock.now();
 }
 
+#[test]
+#[should_panic(expected = "queued monotonic clock instants must be non-decreasing")]
+fn queued_clock_rejects_descending_instants() {
+    let first = Instant::now();
+    let second = first + Duration::from_millis(10);
+
+    let _clock = QueuedMonotonicClock::from_instants([second, first]);
+}
+
 #[rstest]
 #[case(Duration::ZERO)]
 #[case(Duration::from_nanos(1))]

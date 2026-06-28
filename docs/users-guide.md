@@ -6,7 +6,7 @@ elapsed-time measurement.
 ## Clock Abstraction
 
 Monotony exposes a narrow `MonotonicClock` trait over `std::time::Instant`.
-Inject the trait into code that measures durations so production code can use
+Inject the trait into code that measures durations, so production code can use
 `StdMonotonicClock` while tests provide deterministic time.
 
 ```rust
@@ -38,7 +38,7 @@ several pre-seeded instants. Use `ManualMonotonicClock::advance(...)` for
 polling loops and timeout code where the test should explicitly move time
 between observations.
 
-## Generated Tooling
+## Tooling
 
 Monotony uses Rust 2024, a pinned nightly toolchain, strict lint settings, and
 documented library code.

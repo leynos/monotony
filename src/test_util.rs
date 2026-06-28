@@ -82,10 +82,17 @@ pub struct QueuedMonotonicClock {
 
 impl QueuedMonotonicClock {
     /// Creates a clock that returns `instants` in iteration order.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `instants` contains an instant earlier than the instant before
+    /// it.
     #[must_use]
     pub fn from_instants(instants: impl IntoIterator<Item = Instant>) -> Self {
+        let queued_instants = instants.into_iter().collect::<VecDeque<_>>();
+        assert_instants_are_monotonic(&queued_instants);
         Self {
-            instants: Mutex::new(instants.into_iter().collect()),
+            instants: Mutex::new(queued_instants),
         }
     }
 
@@ -170,6 +177,19 @@ fn with_mutex<T, Output>(mutex: &Mutex<T>, operation: impl FnOnce(&mut T) -> Out
             let mut guard = poisoned.into_inner();
             operation(&mut guard)
         }
+    }
+}
+
+fn assert_instants_are_monotonic(instants: &VecDeque<Instant>) {
+    let mut previous_instant = None;
+    for instant in instants {
+        if let Some(previous) = previous_instant {
+            assert!(
+                *instant >= previous,
+                "queued monotonic clock instants must be non-decreasing"
+            );
+        }
+        previous_instant = Some(*instant);
     }
 }
 
