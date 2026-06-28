@@ -1,17 +1,17 @@
 //! Public monotonic clock behaviour.
 
-#![cfg(feature = "test-util")]
-
+#[cfg(feature = "test-util")]
 use std::time::{Duration, Instant};
 
-use monotony::{
-    MonotonicClock,
-    StdMonotonicClock,
-    test_util::{FixedMonotonicClock, ManualMonotonicClock, QueuedMonotonicClock},
-};
+#[cfg(feature = "test-util")]
+use monotony::test_util::{FixedMonotonicClock, ManualMonotonicClock, QueuedMonotonicClock};
+use monotony::{MonotonicClock, StdMonotonicClock};
+#[cfg(feature = "test-util")]
 use proptest::prelude::*;
+#[cfg(feature = "test-util")]
 use rstest::rstest;
 
+#[cfg(feature = "test-util")]
 #[rstest]
 #[case(Duration::ZERO)]
 #[case(Duration::from_millis(250))]
@@ -24,6 +24,7 @@ fn fixed_clock_reports_configured_elapsed_duration(#[case] elapsed: Duration) {
     assert_eq!(finished_at.duration_since(started_at), elapsed);
 }
 
+#[cfg(feature = "test-util")]
 #[test]
 #[should_panic(expected = "queued monotonic clock exhausted")]
 fn fixed_clock_panics_after_its_second_read() {
@@ -34,6 +35,7 @@ fn fixed_clock_panics_after_its_second_read() {
     let _exhausted = clock.now();
 }
 
+#[cfg(feature = "test-util")]
 #[test]
 fn queued_clock_returns_instants_in_insertion_order() {
     let first = Instant::now();
@@ -46,6 +48,7 @@ fn queued_clock_returns_instants_in_insertion_order() {
     assert_eq!(clock.now(), third);
 }
 
+#[cfg(feature = "test-util")]
 #[test]
 #[should_panic(expected = "queued monotonic clock exhausted")]
 fn queued_clock_panics_when_no_instants_remain() {
@@ -54,6 +57,7 @@ fn queued_clock_panics_when_no_instants_remain() {
     let _exhausted = clock.now();
 }
 
+#[cfg(feature = "test-util")]
 #[test]
 #[should_panic(expected = "queued monotonic clock instants must be non-decreasing")]
 fn queued_clock_rejects_descending_instants() {
@@ -63,6 +67,7 @@ fn queued_clock_rejects_descending_instants() {
     let _clock = QueuedMonotonicClock::from_instants([second, first]);
 }
 
+#[cfg(feature = "test-util")]
 #[rstest]
 #[case(Duration::ZERO)]
 #[case(Duration::from_nanos(1))]
@@ -85,6 +90,7 @@ fn standard_clock_can_be_used_through_the_trait() {
     assert!(finished_at >= started_at);
 }
 
+#[cfg(feature = "test-util")]
 proptest! {
     #[test]
     fn manual_clock_accumulates_advances(first_millis in 0_u64..1_000_000, second_millis in 0_u64..1_000_000) {
