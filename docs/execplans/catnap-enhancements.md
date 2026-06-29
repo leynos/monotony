@@ -4,7 +4,7 @@ This ExecPlan (execution plan) is a living document. The sections `Constraints`,
 `Tolerances`, `Risks`, `Progress`, `Surprises & Discoveries`, `Decision Log`,
 and `Outcomes & Retrospective` must be kept up to date as work proceeds.
 
-Status: IN PROGRESS
+Status: COMPLETE
 
 ## Purpose / Big Picture
 
@@ -134,7 +134,10 @@ These thresholds trigger escalation rather than workaround:
   `make markdownlint`, and `make test`; all passed.
 - [x] (2026-06-29 10:45Z) Ran `coderabbit review --agent` for the
   documentation/example milestone; review completed with 0 findings.
-- [ ] Commit only if all quality gates pass and the user requests a commit.
+- [x] (2026-06-29 10:46Z) Committed implementation milestones:
+  `04a38c5 Add shared manual clock and elapsed helper` and
+  `2b410f6 Document clock and sleeper boundaries`.
+- [x] (2026-06-29 10:46Z) Marked this ExecPlan COMPLETE.
 
 ## Surprises & Discoveries
 
@@ -200,8 +203,12 @@ No implementation has started. The expected outcome is a crate that remains
 small and dependency-free while making its intended composition boundary
 clearer for downstream crates such as `catnap`.
 
-At completion, update this section with the validation evidence, the final
-changed file list, and any lessons from the Red-Green-Refactor cycle.
+Final outcome: the planned functionality is implemented. `test-util` is enabled
+for docs.rs builds; `MonotonicClockExt` provides a SemVer-compatible
+`elapsed_since` helper; `SharedManualMonotonicClock` provides a cloneable
+manual test clock behind `test-util`; and the README, clock design document,
+users' guide, and executable users' guide examples document the "clock, not
+sleeper" boundary for catnap-style consumers.
 
 API/test milestone result: Red-Green-Refactor completed for `MonotonicClockExt`
 and `SharedManualMonotonicClock`. Focused tests, full format/lint/test gates,
@@ -211,6 +218,34 @@ Documentation/example milestone result: the README, design document, users'
 guide, and executable guide examples now explain that Monotony observes
 monotonic time and downstream applications own sleeper policy. Full
 format/lint/test/documentation gates and CodeRabbit review passed.
+
+Final validation evidence:
+
+- `make check-fmt` passed.
+- `make lint` passed.
+- `make test` passed with 23 tests and 7 doctests passing.
+- `make markdownlint` passed.
+- `cargo doc --no-deps --features test-util` passed.
+- `cargo test --doc --workspace --all-features` passed.
+- `coderabbit review --agent` completed twice with 0 findings.
+
+Final changed implementation and documentation files:
+
+- `Cargo.toml`
+- `src/lib.rs`
+- `src/test_util.rs`
+- `tests/clock.rs`
+- `tests/trybuild/public_clock_api.rs`
+- `tests/trybuild/test_util_clock_api.rs`
+- `tests/users_guide_examples.rs`
+- `README.md`
+- `docs/clock-design.md`
+- `docs/users-guide.md`
+- `docs/execplans/catnap-enhancements.md`
+
+Lesson: the strict lint profile usefully shaped the guide example. Grouping
+timeout settings into `WaitPolicy` made the consumer-owned sleeper recipe
+clearer while satisfying `too_many_arguments` and `needless_pass_by_value`.
 
 ## Context and Orientation
 
@@ -532,3 +567,6 @@ Fourth revision records completion of the documentation/example milestone,
 including deterministic gate failures that were fixed locally, final passing
 gates, and CodeRabbit's 0-finding review result. Remaining work is only the
 final commit and close-out status update.
+
+Fifth revision marks the ExecPlan COMPLETE and records final commits, changed
+files, validation evidence, and the main implementation lesson.
