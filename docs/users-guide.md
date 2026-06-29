@@ -196,12 +196,21 @@ fn wait_until_timeout(
     started_at: Instant,
     policy: WaitPolicy,
 ) {
+    assert!(
+        policy.interval > Duration::ZERO,
+        "wait interval must be greater than zero"
+    );
+
     loop {
-        if clock.now().duration_since(started_at) >= policy.timeout {
+        let elapsed = clock.now().duration_since(started_at);
+
+        if elapsed >= policy.timeout {
             break;
         }
 
-        sleeper.sleep(policy.interval);
+        let remaining = policy.timeout.saturating_sub(elapsed);
+
+        sleeper.sleep(remaining.min(policy.interval));
     }
 }
 

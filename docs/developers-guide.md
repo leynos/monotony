@@ -23,6 +23,29 @@ The main `.github/workflows/ci.yml` workflow deliberately does not run
 `make test WITH_ACT=1`; the separate Act workflow runs those slower
 container-backed checks in parallel.
 
+## Clock extension boundary
+
+`MonotonicClock` remains the stable one-method production trait. Add
+elapsed-time conveniences to `MonotonicClockExt` instead of adding default
+methods to `MonotonicClock`, so downstream implementors do not need to update
+their core trait implementations for minor releases.
+
+Keep `MonotonicClockExt` limited to monotonic measurement. Sleeping, timers,
+timeouts, retry cadence, async runtime integration, and accelerated logical
+time are consumer-owned policy and must stay outside Monotony's production API.
+
+## Test utility boundary
+
+Deterministic clocks live behind the opt-in `test-util` feature so downstream
+integration tests can use them without changing Monotony's default production
+surface. `ManualMonotonicClock` is the single-owner manual test clock, while
+`SharedManualMonotonicClock` is the cloneable test helper for cases where code
+under test owns one clock handle and the test advances time through another.
+
+Do not make sleeper policy part of `SharedManualMonotonicClock`. Tests that
+need waiting behaviour should define a local sleeper or timer adapter and use
+the shared manual clock only to observe and advance monotonic time.
+
 ## Tooling
 
 Development builds use Cranelift for debug code generation. On Linux targets,

@@ -13,12 +13,15 @@ set.
   top-level files, directories, and ownership boundaries.
 - [Clock design](clock-design.md) explains the clock abstraction and
   `test-util` feature boundary.
-- [Catnap enhancements ExecPlan](execplans/catnap-enhancements.md) records the
-  delivery plan for docs.rs `test-util` visibility, the clock/sleeper boundary,
-  cloneable manual clock handles, and narrow elapsed-time helpers.
 - [Documentation style guide](documentation-style-guide.md) defines the
   spelling, structure, Markdown, Architecture Decision Record (ADR), Request
   for Comments (RFC), and roadmap conventions used by this documentation set.
+
+## Delivery plans
+
+- [Catnap enhancements ExecPlan](execplans/catnap-enhancements.md) records the
+  delivery plan for docs.rs `test-util` visibility, the clock/sleeper boundary,
+  cloneable manual clock handles, and narrow elapsed-time helpers.
 
 ## Rust reference material
 

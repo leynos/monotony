@@ -124,9 +124,9 @@ These thresholds trigger escalation rather than workaround:
   `docs/users-guide.md`, and `tests/users_guide_examples.rs` with the
   clock/sleeper boundary and executable consumer-owned `Sleeper` recipe.
 - [x] (2026-06-29 10:42Z) Ran `cargo doc --no-deps --features test-util`,
-  `cargo test --doc --workspace --all-features`, `cargo test --all-targets
-  --all-features guide_pairs_clock_with_consumer_owned_sleeper`, and
-  `make markdownlint`; all passed.
+  `cargo test --doc --workspace --all-features`,
+  `cargo test --all-targets --all-features guide_pairs_clock_with_consumer_owned_sleeper`,
+  and `make markdownlint`; all passed.
 - [x] (2026-06-29 10:43Z) Fixed deterministic Clippy findings in the guide
   example by making `AdvancingSleeper::new` `const` and grouping timeout
   settings in a `Copy` `WaitPolicy`.
@@ -138,6 +138,18 @@ These thresholds trigger escalation rather than workaround:
   `04a38c5 Add shared manual clock and elapsed helper` and
   `2b410f6 Document clock and sleeper boundaries`.
 - [x] (2026-06-29 10:46Z) Marked this ExecPlan COMPLETE.
+- [x] (2026-06-29 22:15Z) Verified review feedback against current code and
+  kept the ExecPlan status COMPLETE while preparing follow-up fixes.
+- [x] (2026-06-29 22:20Z) Moved the Catnap enhancements ExecPlan entry into
+  the contents index delivery plans grouping.
+- [x] (2026-06-29 22:25Z) Updated the executable sleeper example to reject
+  zero polling intervals and clamp each sleep to the remaining timeout.
+- [x] (2026-06-29 22:30Z) Added regression and property coverage for
+  non-divisible timeout intervals, zero-interval rejection, and bounded sleep
+  durations.
+- [x] (2026-06-29 22:35Z) Added developer-guide notes for
+  `MonotonicClockExt`, `SharedManualMonotonicClock`, and the clock/sleeper
+  boundary.
 
 ## Surprises & Discoveries
 
@@ -167,12 +179,18 @@ These thresholds trigger escalation rather than workaround:
   ExecPlan targets.
 
 - Observation: the executable sleeper guide example needed a small policy
-  value object to satisfy the repository's strict Clippy settings.
-  Evidence: `make lint` reported `too_many_arguments` for
-  `wait_until_timeout` and `needless_pass_by_value` for `WaitPolicy` until it
-  derived `Clone, Copy, Debug`.
-  Impact: the guide now demonstrates the repository's preferred parameter
-  grouping style as well as the clock/sleeper boundary.
+  value object to satisfy the repository's strict Clippy settings. Evidence:
+  `make lint` reported `too_many_arguments` for `wait_until_timeout` and
+  `needless_pass_by_value` for `WaitPolicy` until it derived
+  `Clone, Copy, Debug`. Impact: the guide now demonstrates the repository's
+  preferred parameter grouping style as well as the clock/sleeper boundary.
+
+- Observation: the original executable sleeper guide example only covered a
+  divisible `5s` timeout with a `1s` interval. Evidence: review feedback
+  correctly noted that a fixed-count loop or oversleeping implementation would
+  still pass. Impact: the follow-up adds a non-divisible interval regression, a
+  zero-interval rejection test, and proptest coverage for bounded sleep
+  durations across a range of timeout and interval pairs.
 
 ## Decision Log
 
@@ -218,6 +236,12 @@ Documentation/example milestone result: the README, design document, users'
 guide, and executable guide examples now explain that Monotony observes
 monotonic time and downstream applications own sleeper policy. Full
 format/lint/test/documentation gates and CodeRabbit review passed.
+
+Review follow-up result: the documentation index now groups the Catnap
+enhancements ExecPlan with delivery plans, the developer guide documents the
+maintainer-facing clock extension and test utility boundaries, and the
+executable sleeper recipe rejects zero intervals while clamping each sleep to
+the remaining timeout.
 
 Final validation evidence:
 

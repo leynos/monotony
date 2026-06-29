@@ -12,6 +12,8 @@ use monotony::test_util::{
     SharedManualMonotonicClock,
 };
 use monotony::{MonotonicClock, StdMonotonicClock};
+#[cfg(feature = "test-util")]
+use proptest::prelude::*;
 
 fn measure_elapsed(clock: &dyn MonotonicClock) -> Duration {
     let started_at = clock.now();
@@ -76,6 +78,7 @@ trait Sleeper {
 struct AdvancingSleeper {
     clock: SharedManualMonotonicClock,
     total_slept: Duration,
+    sleep_durations: Vec<Duration>,
 }
 
 #[cfg(feature = "test-util")]
@@ -84,6 +87,7 @@ impl AdvancingSleeper {
         Self {
             clock,
             total_slept: Duration::ZERO,
+            sleep_durations: Vec::new(),
         }
     }
 }
@@ -93,6 +97,7 @@ impl Sleeper for AdvancingSleeper {
     fn sleep(&mut self, duration: Duration) {
         self.clock.advance(duration);
         self.total_slept += duration;
+        self.sleep_durations.push(duration);
     }
 }
 
@@ -110,12 +115,21 @@ fn wait_until_timeout(
     started_at: Instant,
     policy: WaitPolicy,
 ) {
+    assert!(
+        policy.interval > Duration::ZERO,
+        "wait interval must be greater than zero"
+    );
+
     loop {
-        if clock.now().duration_since(started_at) >= policy.timeout {
+        let elapsed = clock.now().duration_since(started_at);
+
+        if elapsed >= policy.timeout {
             break;
         }
 
-        sleeper.sleep(policy.interval);
+        let remaining = policy.timeout.saturating_sub(elapsed);
+
+        sleeper.sleep(remaining.min(policy.interval));
     }
 }
 
@@ -138,4 +152,80 @@ fn guide_pairs_clock_with_consumer_owned_sleeper() {
 
     assert_eq!(sleeper.total_slept, Duration::from_secs(5));
     assert!(has_timed_out(&observed_clock, started_at));
+}
+
+#[cfg(feature = "test-util")]
+#[test]
+fn guide_clamps_final_sleep_to_remaining_timeout() {
+    let started_at = Instant::now();
+    let observed_clock = SharedManualMonotonicClock::new(started_at);
+    let mut sleeper = AdvancingSleeper::new(observed_clock.clone());
+
+    wait_until_timeout(
+        &observed_clock,
+        &mut sleeper,
+        started_at,
+        WaitPolicy {
+            timeout: Duration::from_secs(5),
+            interval: Duration::from_secs(2),
+        },
+    );
+
+    assert_eq!(
+        sleeper.sleep_durations,
+        vec![
+            Duration::from_secs(2),
+            Duration::from_secs(2),
+            Duration::from_secs(1)
+        ]
+    );
+    assert_eq!(sleeper.total_slept, Duration::from_secs(5));
+}
+
+#[cfg(feature = "test-util")]
+#[test]
+#[should_panic(expected = "wait interval must be greater than zero")]
+fn guide_rejects_zero_sleep_interval() {
+    let started_at = Instant::now();
+    let observed_clock = SharedManualMonotonicClock::new(started_at);
+    let mut sleeper = AdvancingSleeper::new(observed_clock.clone());
+
+    wait_until_timeout(
+        &observed_clock,
+        &mut sleeper,
+        started_at,
+        WaitPolicy {
+            timeout: Duration::from_secs(5),
+            interval: Duration::ZERO,
+        },
+    );
+}
+
+#[cfg(feature = "test-util")]
+proptest! {
+    #[test]
+    fn guide_waiter_reaches_timeout_without_oversleeping(
+        timeout_millis in 0_u64..10_000,
+        interval_millis in 1_u64..1_000,
+    ) {
+        let started_at = Instant::now();
+        let observed_clock = SharedManualMonotonicClock::new(started_at);
+        let mut sleeper = AdvancingSleeper::new(observed_clock.clone());
+        let timeout = Duration::from_millis(timeout_millis);
+        let interval = Duration::from_millis(interval_millis);
+
+        wait_until_timeout(
+            &observed_clock,
+            &mut sleeper,
+            started_at,
+            WaitPolicy { timeout, interval },
+        );
+
+        prop_assert_eq!(sleeper.total_slept, timeout);
+        prop_assert!(sleeper
+            .sleep_durations
+            .iter()
+            .all(|duration| *duration > Duration::ZERO && *duration <= interval));
+        prop_assert!(observed_clock.now().duration_since(started_at) >= timeout);
+    }
 }
