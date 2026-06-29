@@ -179,4 +179,35 @@ proptest! {
             previous = current;
         }
     }
+
+    #[test]
+    fn shared_manual_clock_preserves_elapsed_time_across_clone_interleavings(
+        actions in proptest::collection::vec((any::<bool>(), 0_u64..1_000), 0..32),
+    ) {
+        let started_at = Instant::now();
+        let observed_clock = SharedManualMonotonicClock::new(started_at);
+        let mut handles = vec![observed_clock.clone()];
+        let mut total_elapsed = Duration::ZERO;
+
+        for (should_clone, advance_millis) in actions {
+            if should_clone && let Some(handle) = handles.last().cloned() {
+                handles.push(handle);
+            }
+
+            let elapsed = Duration::from_millis(advance_millis);
+
+            if let Some(handle) = handles.last() {
+                handle.advance(elapsed);
+                total_elapsed += elapsed;
+            }
+        }
+
+        for handle in handles {
+            prop_assert_eq!(handle.now().duration_since(started_at), total_elapsed);
+        }
+        prop_assert_eq!(
+            observed_clock.now().duration_since(started_at),
+            total_elapsed
+        );
+    }
 }

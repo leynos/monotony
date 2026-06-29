@@ -150,6 +150,8 @@ These thresholds trigger escalation rather than workaround:
 - [x] (2026-06-29 22:35Z) Added developer-guide notes for
   `MonotonicClockExt`, `SharedManualMonotonicClock`, and the clock/sleeper
   boundary.
+- [x] (2026-06-29 22:45Z) Added property coverage for
+  `SharedManualMonotonicClock` clone and advance interleavings.
 
 ## Surprises & Discoveries
 
@@ -191,6 +193,13 @@ These thresholds trigger escalation rather than workaround:
   still pass. Impact: the follow-up adds a non-divisible interval regression, a
   zero-interval rejection test, and proptest coverage for bounded sleep
   durations across a range of timeout and interval pairs.
+
+- Observation: the existing shared manual clock tests covered two concrete
+  clone/advance paths but not generated interleavings. Evidence: review
+  feedback requested property or proof coverage for the shared-clock state
+  transitions. Impact: the follow-up uses proptest for clone and advance
+  interleavings; Kani is not needed because there is no unsafe code or bounded
+  dispatch proof requirement in this change.
 
 ## Decision Log
 
