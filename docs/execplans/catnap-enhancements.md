@@ -105,8 +105,21 @@ These thresholds trigger escalation rather than workaround:
   release by replacing the core-trait helper with `MonotonicClockExt`.
 - [x] (2026-06-29 10:29Z) Received explicit approval to implement the plan.
 - [x] (2026-06-29 10:29Z) Marked this ExecPlan as IN PROGRESS.
-- [ ] Add red tests and compile-time contracts.
-- [ ] Implement Cargo metadata, extension trait, and shared manual clock.
+- [x] (2026-06-29 10:30Z) Added red tests and compile-time contracts for
+  `MonotonicClockExt` and `SharedManualMonotonicClock`.
+- [x] (2026-06-29 10:31Z) Observed expected red failures:
+  unresolved `monotony::MonotonicClockExt`, unresolved
+  `monotony::test_util::SharedManualMonotonicClock`, and missing
+  `elapsed_since`.
+- [x] (2026-06-29 10:32Z) Implemented Cargo docs.rs metadata,
+  `MonotonicClockExt`, and `SharedManualMonotonicClock`.
+- [x] (2026-06-29 10:33Z) Re-ran focused checks for `elapsed_since`,
+  `shared_manual`, `test_util_clock_api_compiles_for_downstream_crates`, and
+  `public_clock_api_compiles_for_downstream_crates`; all passed.
+- [x] (2026-06-29 10:36Z) Ran `make check-fmt`, `make lint`, and `make test`;
+  all passed after applying `cargo fmt --all`.
+- [x] (2026-06-29 10:37Z) Ran `coderabbit review --agent` for the API/test
+  milestone; review completed with 0 findings.
 - [ ] Update README and documentation.
 - [ ] Run quality gates and record evidence.
 - [ ] Commit only if all quality gates pass and the user requests a commit.
@@ -130,6 +143,13 @@ These thresholds trigger escalation rather than workaround:
   already provide an `elapsed_since` extension trait, and method resolution can
   become ambiguous or change. Impact: this plan uses `MonotonicClockExt` for
   the convenience helper.
+
+- Observation: the `leta` workspace was already registered, but semantic symbol
+  search failed with `Error: Connection closed unexpectedly`.
+  Evidence: `leta workspace add` reported the existing workspace, and
+  `leta grep` returned the connection error during the red-test milestone.
+  Impact: implementation continued from the already-inspected local files and
+  concrete ExecPlan targets.
 
 ## Decision Log
 
@@ -162,6 +182,11 @@ clearer for downstream crates such as `catnap`.
 
 At completion, update this section with the validation evidence, the final
 changed file list, and any lessons from the Red-Green-Refactor cycle.
+
+API/test milestone result: Red-Green-Refactor completed for
+`MonotonicClockExt` and `SharedManualMonotonicClock`. Focused tests, full
+format/lint/test gates, and CodeRabbit review all passed before moving to the
+documentation milestone.
 
 ## Context and Orientation
 
@@ -473,3 +498,8 @@ implementors to change.
 Second revision marks the plan IN PROGRESS after explicit user approval. This
 unblocks the Red-Green-Refactor implementation milestones while preserving the
 same scope and tolerances.
+
+Third revision records completion of the API/test milestone, including red
+failure evidence, green focused checks, full deterministic gates, and
+CodeRabbit's 0-finding review result. Remaining work is the documentation and
+guide-example milestone.

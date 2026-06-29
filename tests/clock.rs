@@ -4,7 +4,14 @@
 use std::time::{Duration, Instant};
 
 #[cfg(feature = "test-util")]
-use monotony::test_util::{FixedMonotonicClock, ManualMonotonicClock, QueuedMonotonicClock};
+use monotony::MonotonicClockExt;
+#[cfg(feature = "test-util")]
+use monotony::test_util::{
+    FixedMonotonicClock,
+    ManualMonotonicClock,
+    QueuedMonotonicClock,
+    SharedManualMonotonicClock,
+};
 use monotony::{MonotonicClock, StdMonotonicClock};
 #[cfg(feature = "test-util")]
 use proptest::prelude::*;
@@ -79,6 +86,51 @@ fn manual_clock_advances_from_initial_instant(#[case] elapsed: Duration) {
     clock.advance(elapsed);
 
     assert_eq!(clock.now().duration_since(started_at), elapsed);
+}
+
+#[cfg(feature = "test-util")]
+#[test]
+fn elapsed_since_reports_duration_from_start() {
+    let started_at = Instant::now();
+    let finished_at = started_at + Duration::from_millis(275);
+    let clock = QueuedMonotonicClock::from_instants([finished_at]);
+
+    assert_eq!(clock.elapsed_since(started_at), Duration::from_millis(275));
+}
+
+#[cfg(feature = "test-util")]
+#[test]
+fn shared_manual_clock_observes_advances_from_cloned_handle() {
+    let started_at = Instant::now();
+    let observer = SharedManualMonotonicClock::new(started_at);
+    let controller = observer.clone();
+
+    controller.advance(Duration::from_secs(4));
+
+    assert_eq!(
+        observer.now().duration_since(started_at),
+        Duration::from_secs(4)
+    );
+}
+
+#[cfg(feature = "test-util")]
+#[test]
+fn shared_manual_clock_accumulates_advances_across_handles() {
+    let started_at = Instant::now();
+    let first = SharedManualMonotonicClock::new(started_at);
+    let second = first.clone();
+
+    first.advance(Duration::from_secs(2));
+    second.advance(Duration::from_secs(3));
+
+    assert_eq!(
+        first.now().duration_since(started_at),
+        Duration::from_secs(5)
+    );
+    assert_eq!(
+        second.now().duration_since(started_at),
+        Duration::from_secs(5)
+    );
 }
 
 #[test]
