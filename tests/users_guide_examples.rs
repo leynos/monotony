@@ -5,7 +5,12 @@ use std::time::Duration;
 use std::time::Instant;
 
 #[cfg(feature = "test-util")]
-use monotony::test_util::{FixedMonotonicClock, ManualMonotonicClock, QueuedMonotonicClock};
+use monotony::test_util::{
+    FixedMonotonicClock,
+    ManualMonotonicClock,
+    QueuedMonotonicClock,
+    SharedManualMonotonicClock,
+};
 use monotony::{MonotonicClock, StdMonotonicClock};
 
 fn measure_elapsed(clock: &dyn MonotonicClock) -> Duration {
@@ -60,4 +65,77 @@ fn guide_advances_manual_time() {
 #[cfg(feature = "test-util")]
 fn has_timed_out(clock: &dyn MonotonicClock, started_at: Instant) -> bool {
     clock.now().duration_since(started_at) >= Duration::from_secs(5)
+}
+
+#[cfg(feature = "test-util")]
+trait Sleeper {
+    fn sleep(&mut self, duration: Duration);
+}
+
+#[cfg(feature = "test-util")]
+struct AdvancingSleeper {
+    clock: SharedManualMonotonicClock,
+    total_slept: Duration,
+}
+
+#[cfg(feature = "test-util")]
+impl AdvancingSleeper {
+    const fn new(clock: SharedManualMonotonicClock) -> Self {
+        Self {
+            clock,
+            total_slept: Duration::ZERO,
+        }
+    }
+}
+
+#[cfg(feature = "test-util")]
+impl Sleeper for AdvancingSleeper {
+    fn sleep(&mut self, duration: Duration) {
+        self.clock.advance(duration);
+        self.total_slept += duration;
+    }
+}
+
+#[cfg(feature = "test-util")]
+#[derive(Clone, Copy, Debug)]
+struct WaitPolicy {
+    timeout: Duration,
+    interval: Duration,
+}
+
+#[cfg(feature = "test-util")]
+fn wait_until_timeout(
+    clock: &dyn MonotonicClock,
+    sleeper: &mut dyn Sleeper,
+    started_at: Instant,
+    policy: WaitPolicy,
+) {
+    loop {
+        if clock.now().duration_since(started_at) >= policy.timeout {
+            break;
+        }
+
+        sleeper.sleep(policy.interval);
+    }
+}
+
+#[cfg(feature = "test-util")]
+#[test]
+fn guide_pairs_clock_with_consumer_owned_sleeper() {
+    let started_at = Instant::now();
+    let observed_clock = SharedManualMonotonicClock::new(started_at);
+    let mut sleeper = AdvancingSleeper::new(observed_clock.clone());
+
+    wait_until_timeout(
+        &observed_clock,
+        &mut sleeper,
+        started_at,
+        WaitPolicy {
+            timeout: Duration::from_secs(5),
+            interval: Duration::from_secs(1),
+        },
+    );
+
+    assert_eq!(sleeper.total_slept, Duration::from_secs(5));
+    assert!(has_timed_out(&observed_clock, started_at));
 }

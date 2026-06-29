@@ -24,6 +24,19 @@ let elapsed = measure_elapsed(&StdMonotonicClock);
 assert!(elapsed >= Duration::ZERO);
 ```
 
+Import `MonotonicClockExt` when code wants the common elapsed-time helper
+without changing the core trait contract.
+
+```rust
+use std::time::{Duration, Instant};
+
+use monotony::{MonotonicClock, MonotonicClockExt};
+
+fn has_elapsed(clock: &dyn MonotonicClock, started_at: Instant) -> bool {
+    clock.elapsed_since(started_at) >= Duration::from_secs(5)
+}
+```
+
 ## Test Utilities
 
 Test helpers are available behind the `test-util` feature. They are not hidden
@@ -39,7 +52,9 @@ Use `FixedMonotonicClock::with_elapsed(...)` for code that calls `now()`
 exactly twice. Use `QueuedMonotonicClock::from_instants(...)` when a test needs
 several pre-seeded instants. Use `ManualMonotonicClock::advance(...)` for
 polling loops and timeout code where the test should explicitly move time
-between observations.
+between observations. Use `SharedManualMonotonicClock` when code under test
+must own one clock handle while the test advances time through another cloned
+handle.
 
 ### Fixed elapsed time
 
@@ -106,6 +121,112 @@ clock.advance(Duration::from_secs(5));
 
 assert!(has_timed_out(&clock, started_at));
 ```
+
+### Shared manual time
+
+Use `SharedManualMonotonicClock` when one component observes time through an
+owned clock handle and the test needs a separate handle for advancing time.
+
+```rust
+use std::time::{Duration, Instant};
+
+use monotony::{MonotonicClock, test_util::SharedManualMonotonicClock};
+
+fn has_timed_out(clock: &dyn MonotonicClock, started_at: Instant) -> bool {
+    clock.now().duration_since(started_at) >= Duration::from_secs(5)
+}
+
+let started_at = Instant::now();
+let observed_clock = SharedManualMonotonicClock::new(started_at);
+let controller = observed_clock.clone();
+
+assert!(!has_timed_out(&observed_clock, started_at));
+
+controller.advance(Duration::from_secs(5));
+
+assert!(has_timed_out(&observed_clock, started_at));
+```
+
+## Application Sleeper Policy
+
+Monotony is a clock abstraction, not a sleeper abstraction. It does not own
+blocking sleep, async runtime timers, retry policy, timeout policy, or
+logical-time scaling. Applications that need both elapsed-time measurement and
+waiting should compose `MonotonicClock` with their own sleeper boundary.
+
+```rust
+use std::time::{Duration, Instant};
+
+use monotony::{MonotonicClock, test_util::SharedManualMonotonicClock};
+
+trait Sleeper {
+    fn sleep(&mut self, duration: Duration);
+}
+
+struct AdvancingSleeper {
+    clock: SharedManualMonotonicClock,
+    total_slept: Duration,
+}
+
+impl AdvancingSleeper {
+    const fn new(clock: SharedManualMonotonicClock) -> Self {
+        Self {
+            clock,
+            total_slept: Duration::ZERO,
+        }
+    }
+}
+
+impl Sleeper for AdvancingSleeper {
+    fn sleep(&mut self, duration: Duration) {
+        self.clock.advance(duration);
+        self.total_slept += duration;
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+struct WaitPolicy {
+    timeout: Duration,
+    interval: Duration,
+}
+
+fn wait_until_timeout(
+    clock: &dyn MonotonicClock,
+    sleeper: &mut dyn Sleeper,
+    started_at: Instant,
+    policy: WaitPolicy,
+) {
+    loop {
+        if clock.now().duration_since(started_at) >= policy.timeout {
+            break;
+        }
+
+        sleeper.sleep(policy.interval);
+    }
+}
+
+let started_at = Instant::now();
+let observed_clock = SharedManualMonotonicClock::new(started_at);
+let mut sleeper = AdvancingSleeper::new(observed_clock.clone());
+
+wait_until_timeout(
+    &observed_clock,
+    &mut sleeper,
+    started_at,
+    WaitPolicy {
+        timeout: Duration::from_secs(5),
+        interval: Duration::from_secs(1),
+    },
+);
+
+assert_eq!(sleeper.total_slept, Duration::from_secs(5));
+assert!(observed_clock.now().duration_since(started_at) >= Duration::from_secs(5));
+```
+
+In production, the same application-owned `Sleeper` trait could call
+`std::thread::sleep`, delegate to an async runtime, or apply a test-time
+acceleration policy. Monotony stays responsible only for monotonic time
+observation.
 
 ## Tooling
 

@@ -120,8 +120,20 @@ These thresholds trigger escalation rather than workaround:
   all passed after applying `cargo fmt --all`.
 - [x] (2026-06-29 10:37Z) Ran `coderabbit review --agent` for the API/test
   milestone; review completed with 0 findings.
-- [ ] Update README and documentation.
-- [ ] Run quality gates and record evidence.
+- [x] (2026-06-29 10:41Z) Updated `README.md`, `docs/clock-design.md`,
+  `docs/users-guide.md`, and `tests/users_guide_examples.rs` with the
+  clock/sleeper boundary and executable consumer-owned `Sleeper` recipe.
+- [x] (2026-06-29 10:42Z) Ran `cargo doc --no-deps --features test-util`,
+  `cargo test --doc --workspace --all-features`, `cargo test --all-targets
+  --all-features guide_pairs_clock_with_consumer_owned_sleeper`, and
+  `make markdownlint`; all passed.
+- [x] (2026-06-29 10:43Z) Fixed deterministic Clippy findings in the guide
+  example by making `AdvancingSleeper::new` `const` and grouping timeout
+  settings in a `Copy` `WaitPolicy`.
+- [x] (2026-06-29 10:44Z) Re-ran `make fmt`, `make check-fmt`, `make lint`,
+  `make markdownlint`, and `make test`; all passed.
+- [x] (2026-06-29 10:45Z) Ran `coderabbit review --agent` for the
+  documentation/example milestone; review completed with 0 findings.
 - [ ] Commit only if all quality gates pass and the user requests a commit.
 
 ## Surprises & Discoveries
@@ -145,11 +157,19 @@ These thresholds trigger escalation rather than workaround:
   the convenience helper.
 
 - Observation: the `leta` workspace was already registered, but semantic symbol
-  search failed with `Error: Connection closed unexpectedly`.
-  Evidence: `leta workspace add` reported the existing workspace, and
-  `leta grep` returned the connection error during the red-test milestone.
-  Impact: implementation continued from the already-inspected local files and
-  concrete ExecPlan targets.
+  search failed with `Error: Connection closed unexpectedly`. Evidence:
+  `leta workspace add` reported the existing workspace, and `leta grep`
+  returned the connection error during the red-test milestone. Impact:
+  implementation continued from the already-inspected local files and concrete
+  ExecPlan targets.
+
+- Observation: the executable sleeper guide example needed a small policy
+  value object to satisfy the repository's strict Clippy settings.
+  Evidence: `make lint` reported `too_many_arguments` for
+  `wait_until_timeout` and `needless_pass_by_value` for `WaitPolicy` until it
+  derived `Clone, Copy, Debug`.
+  Impact: the guide now demonstrates the repository's preferred parameter
+  grouping style as well as the clock/sleeper boundary.
 
 ## Decision Log
 
@@ -183,10 +203,14 @@ clearer for downstream crates such as `catnap`.
 At completion, update this section with the validation evidence, the final
 changed file list, and any lessons from the Red-Green-Refactor cycle.
 
-API/test milestone result: Red-Green-Refactor completed for
-`MonotonicClockExt` and `SharedManualMonotonicClock`. Focused tests, full
-format/lint/test gates, and CodeRabbit review all passed before moving to the
-documentation milestone.
+API/test milestone result: Red-Green-Refactor completed for `MonotonicClockExt`
+and `SharedManualMonotonicClock`. Focused tests, full format/lint/test gates,
+and CodeRabbit review all passed before moving to the documentation milestone.
+
+Documentation/example milestone result: the README, design document, users'
+guide, and executable guide examples now explain that Monotony observes
+monotonic time and downstream applications own sleeper policy. Full
+format/lint/test/documentation gates and CodeRabbit review passed.
 
 ## Context and Orientation
 
@@ -503,3 +527,8 @@ Third revision records completion of the API/test milestone, including red
 failure evidence, green focused checks, full deterministic gates, and
 CodeRabbit's 0-finding review result. Remaining work is the documentation and
 guide-example milestone.
+
+Fourth revision records completion of the documentation/example milestone,
+including deterministic gate failures that were fixed locally, final passing
+gates, and CodeRabbit's 0-finding review result. Remaining work is only the
+final commit and close-out status update.
