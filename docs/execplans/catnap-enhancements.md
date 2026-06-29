@@ -4,7 +4,7 @@ This ExecPlan (execution plan) is a living document. The sections `Constraints`,
 `Tolerances`, `Risks`, `Progress`, `Surprises & Discoveries`, `Decision Log`,
 and `Outcomes & Retrospective` must be kept up to date as work proceeds.
 
-Status: DRAFT
+Status: IN PROGRESS
 
 ## Purpose / Big Picture
 
@@ -103,7 +103,8 @@ These thresholds trigger escalation rather than workaround:
   `README.md`, and current tests.
 - [x] (2026-06-29 00:00Z) Revised the plan for a `1.1.0` SemVer-compatible
   release by replacing the core-trait helper with `MonotonicClockExt`.
-- [ ] Await explicit approval to implement.
+- [x] (2026-06-29 10:29Z) Received explicit approval to implement the plan.
+- [x] (2026-06-29 10:29Z) Marked this ExecPlan as IN PROGRESS.
 - [ ] Add red tests and compile-time contracts.
 - [ ] Implement Cargo metadata, extension trait, and shared manual clock.
 - [ ] Update README and documentation.
@@ -468,3 +469,7 @@ the first draft discussed in conversation, this revision changes
 `MonotonicClockExt` extension trait so the enhancement fits a `1.1.0`
 SemVer-compatible release without requiring existing `MonotonicClock`
 implementors to change.
+
+Second revision marks the plan IN PROGRESS after explicit user approval. This
+unblocks the Red-Green-Refactor implementation milestones while preserving the
+same scope and tolerances.
