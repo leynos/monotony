@@ -14,6 +14,9 @@ ______________________________________________________________________
   logic directly to `Instant::now()`.
 - **Mock time downstream:** Enable the `test-util` feature from your own
   crate's dev-dependencies and use deterministic clocks in integration tests.
+- **Bring your own sleeper:** Pair clocks with application-owned sleep, timer,
+  async runtime, or logical-time policy instead of making those choices part of
+  Monotony.
 - **Stay small:** The production crate surface is dependency-free and focused
   on one job.
 
@@ -73,11 +76,19 @@ ______________________________________________________________________
 ## Features
 
 - `MonotonicClock` trait for elapsed-time measurement.
+- `MonotonicClockExt` convenience methods for narrow elapsed-time helpers.
 - `StdMonotonicClock` production adapter backed by `Instant::now()`.
 - `FixedMonotonicClock` for exactly two `now()` calls in simple tests.
 - `QueuedMonotonicClock` for deterministic sequences of instants.
 - `ManualMonotonicClock` for tests that explicitly advance time.
+- `SharedManualMonotonicClock` for cloneable manual time control across owned
+  test handles.
 - `trybuild`, doctest, property, and runtime coverage for the public contract.
+
+Monotony intentionally does not own sleep, timers, async runtimes, retry
+policy, timeout policy, or logical-time scaling. Downstream crates should pair
+`MonotonicClock` with their own sleeper or timer adapter when they need waiting
+behaviour.
 
 ______________________________________________________________________
 

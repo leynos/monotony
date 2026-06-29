@@ -23,6 +23,7 @@ compact and omits build output such as `target/`.
 │   ├── contents.md
 │   ├── clock-design.md
 │   ├── developers-guide.md
+│   ├── execplans/
 │   ├── repository-layout.md
 │   ├── users-guide.md
 │   └── ...
@@ -62,6 +63,8 @@ compact and omits build output such as `target/`.
   documentation files are added, renamed, or removed.
 - `docs/clock-design.md`: Records the architectural rationale for the clock
   abstraction and `test-util` feature boundary.
+- `docs/execplans/`: Holds living execution plans for substantial repository
+  changes that should be reviewed before implementation.
 - `docs/users-guide.md`: Explains how to use the generated project and its
   public build and test commands.
 - `docs/developers-guide.md`: Explains the contributor workflow and local

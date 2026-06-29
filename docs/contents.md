@@ -17,6 +17,12 @@ set.
   spelling, structure, Markdown, Architecture Decision Record (ADR), Request
   for Comments (RFC), and roadmap conventions used by this documentation set.
 
+## Delivery plans
+
+- [Catnap enhancements ExecPlan](execplans/catnap-enhancements.md) records the
+  delivery plan for docs.rs `test-util` visibility, the clock/sleeper boundary,
+  cloneable manual clock handles, and narrow elapsed-time helpers.
+
 ## Rust reference material
 
 - [Reliable testing in Rust via dependency injection](reliable-testing-in-rust-via-dependency-injection.md)

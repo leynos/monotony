@@ -6,7 +6,7 @@
 
 use std::{
     collections::VecDeque,
-    sync::Mutex,
+    sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
 
@@ -182,6 +182,65 @@ impl ManualMonotonicClock {
 }
 
 impl MonotonicClock for ManualMonotonicClock {
+    fn now(&self) -> Instant { self.with_current(|current| *current) }
+}
+
+/// Cloneable deterministic clock advanced explicitly by tests.
+///
+/// Use this helper when code under test needs to own one clock handle while the
+/// test keeps another handle for controlling time.
+///
+/// ```
+/// use std::time::{Duration, Instant};
+///
+/// use monotony::{MonotonicClock, test_util::SharedManualMonotonicClock};
+///
+/// fn has_timed_out(clock: &dyn MonotonicClock, started_at: Instant) -> bool {
+///     clock.now().duration_since(started_at) >= Duration::from_secs(5)
+/// }
+///
+/// let started_at = Instant::now();
+/// let observed_clock = SharedManualMonotonicClock::new(started_at);
+/// let controller = observed_clock.clone();
+///
+/// assert!(!has_timed_out(&observed_clock, started_at));
+///
+/// controller.advance(Duration::from_secs(5));
+///
+/// assert!(has_timed_out(&observed_clock, started_at));
+/// ```
+#[derive(Clone, Debug)]
+pub struct SharedManualMonotonicClock {
+    current: Arc<Mutex<Instant>>,
+}
+
+impl SharedManualMonotonicClock {
+    /// Creates a shared manual clock starting at `instant`.
+    #[must_use]
+    pub fn new(instant: Instant) -> Self {
+        Self {
+            current: Arc::new(Mutex::new(instant)),
+        }
+    }
+
+    /// Advances the current instant by `duration`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `duration` cannot be represented as an [`Instant`] offset from
+    /// the current instant.
+    pub fn advance(&self, duration: Duration) {
+        self.with_current(|current| {
+            *current = add_duration(*current, duration);
+        });
+    }
+
+    fn with_current<Output>(&self, operation: impl FnOnce(&mut Instant) -> Output) -> Output {
+        with_mutex(&self.current, operation)
+    }
+}
+
+impl MonotonicClock for SharedManualMonotonicClock {
     fn now(&self) -> Instant { self.with_current(|current| *current) }
 }
 
