@@ -94,7 +94,7 @@ jobs:
           echo "Coverage CFLAGS: -fuse-ld=lld"
           echo "Coverage LDFLAGS: -fuse-ld=lld"
       - name: Test and Measure Coverage
-        uses: leynos/shared-actions/.github/actions/generate-coverage@7da7c6d89033d13cbb1c64803d108ddca97e69c2
+        uses: leynos/shared-actions/.github/actions/generate-coverage@1213d7874aa42ff034587d9385f35178d51e1f65
         env:
           CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER: clang
           RUSTFLAGS: -C link-arg=-fuse-ld=lld
