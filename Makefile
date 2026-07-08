@@ -61,7 +61,7 @@ coverage: ## Generate lcov coverage with lld for llvm-tools compatibility
 		LDFLAGS="$(COVERAGE_LINKER_FLAGS)" \
 		$(CARGO) llvm-cov --lcov --output-path lcov.info $(TEST_FLAGS)
 
-lint: ## Run Clippy with warnings denied
+lint: ## Run rustdoc, Clippy, and the Whitaker suite with warnings denied
 	RUSTDOCFLAGS="$(RUSTDOC_FLAGS)" $(CARGO) doc --no-deps
 	$(CARGO) clippy $(CLIPPY_FLAGS)
 	@echo "Whitaker binary: $(WHITAKER)"
