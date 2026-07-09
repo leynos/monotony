@@ -14,7 +14,7 @@ jobs:
       ACT_VERSION: v0.2.80
       CARGO_TERM_COLOR: always
     steps:
-      - uses: actions/checkout@b9e0990d219a03df7633c93f6f005a8fecbcab22
+      - uses: actions/checkout@e8d4307400f9427dba7cb98e488d6ab85f1cec5f
         with:
           persist-credentials: false
       - name: Setup Rust
