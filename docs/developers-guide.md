@@ -2,6 +2,14 @@
 
 This guide explains the contributor workflow for the Monotony project.
 
+## Spelling policy
+
+Run `make spelling` to enforce en-GB-oxendict prose spelling. The generated
+`typos.toml` starts from the shared estate dictionary, refreshes its untracked
+local cache only when the authority is newer, and then applies the narrow
+repository policy in `typos.local.toml`. Edit the local policy and regenerate
+the configuration rather than changing generated entries by hand.
+
 Architectural rationale for the clock abstraction and the `test-util` feature
 boundary lives in [clock design](clock-design.md). Path ownership and
 repository boundaries live in [repository layout](repository-layout.md).
