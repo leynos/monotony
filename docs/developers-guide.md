@@ -23,6 +23,11 @@ not reuse its infrastructure internals. This boundary keeps the public
 dictionary-rendering API stable while each Python source remains below the
 repository's 400-line limit.
 
+Each refresh call carries metadata, offline mode, and an optional test opener
+in one immutable `RefreshOptions` value. Construct that value at the generator
+or test call site; do not pass the HTTP helper's private local-source state
+across the dictionary-rendering boundary.
+
 Architectural rationale for the clock abstraction and the `test-util` feature
 boundary lives in [clock design](clock-design.md). Path ownership and
 repository boundaries live in [repository layout](repository-layout.md).

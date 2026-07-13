@@ -7,6 +7,7 @@ the spelling helper should not reuse these infrastructure internals.
 
 from __future__ import annotations
 
+import dataclasses as dc
 import email.utils
 import json
 import pathlib
@@ -20,6 +21,47 @@ import typos_rollout_cache
 ContentValidator = cabc.Callable[[bytes], None]
 Opener = cabc.Callable[..., typos_rollout_cache.RemoteResponse]
 HTTP_NOT_MODIFIED = 304
+
+
+@dc.dataclass(frozen=True, slots=True, kw_only=True)
+class RefreshOptions:
+    """Configure one shared-dictionary refresh operation.
+
+    Attributes
+    ----------
+    metadata
+        Sidecar path containing source identity and freshness validators.
+    offline
+        Whether to reuse a valid cache without contacting the authority.
+    opener
+        Optional injectable HTTPS opener for deterministic tests.
+
+    Examples
+    --------
+    >>> RefreshOptions(metadata=pathlib.Path(".typos-base.json")).offline
+    False
+    """
+
+    metadata: pathlib.Path
+    offline: bool = False
+    opener: Opener | None = None
+
+
+@dc.dataclass(frozen=True, slots=True)
+class _LocalSourceState:
+    """Group local authority identity and freshness state."""
+
+    name: str
+    mtime_ns: int
+    validate: ContentValidator
+
+
+@dc.dataclass(frozen=True, slots=True)
+class _RefreshContext:
+    """Bind caller options to dictionary validation policy."""
+
+    options: RefreshOptions
+    validate: ContentValidator
 
 
 class NetworkUnavailableError(OSError):
@@ -86,18 +128,18 @@ def _remote_is_not_newer(
 def _local_cache_is_current(
     cache: pathlib.Path,
     saved: cabc.Mapping[str, object],
-    source_name: str,
-    source_mtime_ns: int,
-    validate: ContentValidator,
+    source: _LocalSourceState,
 ) -> bool:
     """Return whether metadata proves a valid local-source cache is current."""
     saved_mtime = saved.get("mtime_ns")
-    has_matching_source = saved.get("source") == source_name
+    has_matching_source = saved.get("source") == source.name
     has_new_enough_mtime = (
-        isinstance(saved_mtime, int) and source_mtime_ns <= saved_mtime
+        isinstance(saved_mtime, int) and source.mtime_ns <= saved_mtime
     )
     return (
-        _valid_cache(cache, validate) and has_matching_source and has_new_enough_mtime
+        _valid_cache(cache, source.validate)
+        and has_matching_source
+        and has_new_enough_mtime
     )
 
 
@@ -109,14 +151,14 @@ def _refresh_local(
 ) -> typos_rollout_cache.RefreshResult:
     """Refresh from a local authoritative copy when it is newer."""
     source_stat = source.stat()
-    source_name = str(source.resolve())
+    source_state = _LocalSourceState(
+        str(source.resolve()), source_stat.st_mtime_ns, validate
+    )
     saved = _read_metadata(metadata)
     if _local_cache_is_current(
         cache,
         saved,
-        source_name,
-        source_stat.st_mtime_ns,
-        validate,
+        source_state,
     ):
         return typos_rollout_cache.RefreshResult("current", cache)
     content = source.read_bytes()
@@ -124,7 +166,7 @@ def _refresh_local(
     typos_rollout_cache.atomic_write(cache, content)
     _write_metadata(
         metadata,
-        {"source": source_name, "mtime_ns": source_stat.st_mtime_ns},
+        {"source": source_state.name, "mtime_ns": source_state.mtime_ns},
     )
     return typos_rollout_cache.RefreshResult("refreshed", cache)
 
@@ -289,11 +331,7 @@ def _refresh_http(
 def refresh_base(
     source: str | pathlib.Path,
     cache: pathlib.Path,
-    *,
-    metadata: pathlib.Path,
-    validate: ContentValidator,
-    offline: bool = False,
-    opener: Opener | None = None,
+    context: _RefreshContext,
 ) -> typos_rollout_cache.RefreshResult:
     """Refresh an untracked cache when its authoritative copy is newer.
 
@@ -303,14 +341,8 @@ def refresh_base(
         Local path or HTTPS URL for the authoritative shared dictionary.
     cache
         Untracked local cache destination.
-    metadata
-        Sidecar path containing source identity and freshness validators.
-    validate
-        Callback that rejects invalid dictionary bytes.
-    offline
-        Reuse a valid cache without contacting the authority.
-    opener
-        Injectable HTTPS opener. The guarded production opener is the default.
+    context
+        Refresh options bound to the dictionary validation callback.
 
     Returns
     -------
@@ -330,11 +362,16 @@ def refresh_base(
     TypeError, ValueError
         If dictionary validation fails.
     """
-    if offline:
-        if not _valid_cache(cache, validate):
+    options = context.options
+    if options.offline:
+        if not _valid_cache(cache, context.validate):
             message = f"no cached shared dictionary at {cache}"
             raise FileNotFoundError(message)
         return typos_rollout_cache.RefreshResult("offline-cache", cache)
     if isinstance(source, pathlib.Path) or "://" not in str(source):
-        return _refresh_local(pathlib.Path(source), cache, metadata, validate)
-    return _refresh_http(str(source), cache, metadata, validate, opener)
+        return _refresh_local(
+            pathlib.Path(source), cache, options.metadata, context.validate
+        )
+    return _refresh_http(
+        str(source), cache, options.metadata, context.validate, options.opener
+    )

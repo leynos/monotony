@@ -16,6 +16,7 @@ if typ.TYPE_CHECKING:
     import collections.abc as cabc
 
 RefreshResult = typos_rollout_cache.RefreshResult
+RefreshOptions = typos_rollout_http.RefreshOptions
 NetworkUnavailableError = typos_rollout_http.NetworkUnavailableError
 InsecureSourceError = typos_rollout_http.InsecureSourceError
 _HttpsRedirectHandler = typos_rollout_http._HttpsRedirectHandler
@@ -319,10 +320,7 @@ def _http_error_result(
 def refresh_base(
     source: str | pathlib.Path,
     cache: pathlib.Path,
-    *,
-    metadata: pathlib.Path,
-    offline: bool = False,
-    opener: typ.Callable[..., typos_rollout_cache.RemoteResponse] | None = None,
+    options: RefreshOptions,
 ) -> RefreshResult:
     """Refresh an untracked base cache when the authoritative copy is newer.
 
@@ -332,13 +330,8 @@ def refresh_base(
         Local path or HTTPS URL for the authoritative shared dictionary.
     cache
         Untracked local cache destination.
-    metadata
-        Sidecar path containing source identity and freshness validators.
-    offline
-        Reuse a valid cache without contacting the authority.
-    opener
-        Injectable HTTPS opener for deterministic tests. The guarded production
-        opener is used by default.
+    options
+        Metadata, offline mode, and injectable HTTPS boundary.
 
     Returns
     -------
@@ -363,16 +356,17 @@ def refresh_base(
     >>> refresh_base(
     ...     pathlib.Path("shared.toml"),
     ...     pathlib.Path(".typos-base.toml"),
-    ...     metadata=pathlib.Path(".typos-base.json"),
+    ...     RefreshOptions(metadata=pathlib.Path(".typos-base.json")),
     ... ).status in {"current", "refreshed"}
     True
     """
-    effective_opener = _HTTPS_OPENER.open if opener is None else opener
+    effective_opener = _HTTPS_OPENER.open if options.opener is None else options.opener
+    effective_options = dc.replace(options, opener=effective_opener)
     return typos_rollout_http.refresh_base(
         source,
         cache,
-        metadata=metadata,
-        validate=_validate_dictionary_bytes,
-        offline=offline,
-        opener=effective_opener,
+        typos_rollout_http._RefreshContext(
+            effective_options,
+            _validate_dictionary_bytes,
+        ),
     )

@@ -314,15 +314,18 @@ def test_local_refresh_keeps_a_newer_cache(
     source = tmp_path / "shared.toml"
     cache = tmp_path / ".typos-base.toml"
     metadata = tmp_path / ".typos-base.json"
+    options = rollout.RefreshOptions(metadata=metadata)
     source.write_text(_dictionary_text(), encoding="utf-8")
     source.touch()
-    rollout.refresh_base(source, cache, metadata=metadata)
+    rollout.refresh_base(source, cache, options)
     cache.write_text(_dictionary_text("newer"), encoding="utf-8")
     cache_mtime = max(cache.stat().st_mtime_ns, source.stat().st_mtime_ns + 1)
     os.utime(cache, ns=(cache_mtime, cache_mtime))
 
-    result = rollout.refresh_base(source, cache, metadata=metadata)
+    result = rollout.refresh_base(source, cache, options)
 
+    assert options.metadata == metadata, "refresh options lost the metadata path"
+    assert not options.offline, "refresh options changed the online default"
     assert result.status == "current", "older local authority replaced a newer cache"
     assert rollout.load_dictionary(cache).stems == ("newer",), (
         "current local refresh changed cached policy"
@@ -337,21 +340,20 @@ def test_offline_refresh_requires_and_reuses_valid_cache(
     _, _, rollout, _ = rollout_modules
     cache = tmp_path / "base.toml"
     metadata = tmp_path / "base.json"
+    options = rollout.RefreshOptions(metadata=metadata, offline=True)
 
     with pytest.raises(FileNotFoundError, match="no cached shared dictionary"):
         rollout.refresh_base(
             "https://example.invalid/base",
             cache,
-            metadata=metadata,
-            offline=True,
+            options,
         )
 
     cache.write_text(_dictionary_text(), encoding="utf-8")
     result = rollout.refresh_base(
         "https://example.invalid/base",
         cache,
-        metadata=metadata,
-        offline=True,
+        options,
     )
 
     assert result.status == "offline-cache", (
@@ -369,13 +371,14 @@ def test_local_refresh_switches_authority_and_records_metadata(
     second = tmp_path / "second.toml"
     cache = tmp_path / "cache.toml"
     metadata = tmp_path / "cache.json"
+    options = rollout.RefreshOptions(metadata=metadata)
     first.write_text(_dictionary_text("first"), encoding="utf-8")
     second.write_text(_dictionary_text("second"), encoding="utf-8")
     os.utime(first, ns=(3_000_000_000, 3_000_000_000))
     os.utime(second, ns=(1_000_000_000, 1_000_000_000))
-    rollout.refresh_base(first, cache, metadata=metadata)
+    rollout.refresh_base(first, cache, options)
 
-    result = rollout.refresh_base(second, cache, metadata=metadata)
+    result = rollout.refresh_base(second, cache, options)
 
     assert result.status == "refreshed", (
         "authority switch did not refresh the local cache"

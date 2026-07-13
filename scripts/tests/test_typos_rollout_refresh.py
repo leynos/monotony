@@ -95,20 +95,17 @@ def test_remote_source_switch_drops_previous_validators(
     rollout.refresh_base(
         first_source,
         cache,
-        metadata=metadata,
-        opener=open_response,
+        rollout.RefreshOptions(metadata=metadata, opener=open_response),
     )
     same = rollout.refresh_base(
         first_source,
         cache,
-        metadata=metadata,
-        opener=open_response,
+        rollout.RefreshOptions(metadata=metadata, opener=open_response),
     )
     replacement = rollout.refresh_base(
         "https://example.test/replacement.toml",
         cache,
-        metadata=metadata,
-        opener=open_response,
+        rollout.RefreshOptions(metadata=metadata, opener=open_response),
     )
 
     assert same.status == "current", "matching validators did not preserve cache"
@@ -149,10 +146,12 @@ def test_changed_etag_overrides_unchanged_date(
     result = rollout.refresh_base(
         source,
         cache,
-        metadata=metadata,
-        opener=lambda *_args, **_kwargs: ValidResponse(
-            stem="replacement",
-            headers={"ETag": '"estate-v2"', "Last-Modified": modified},
+        rollout.RefreshOptions(
+            metadata=metadata,
+            opener=lambda *_args, **_kwargs: ValidResponse(
+                stem="replacement",
+                headers={"ETag": '"estate-v2"', "Last-Modified": modified},
+            ),
         ),
     )
 
@@ -179,8 +178,7 @@ def test_connectivity_failure_uses_only_valid_stale_cache(
         rollout.refresh_base(
             "https://example.test/base",
             cache,
-            metadata=metadata,
-            opener=unavailable,
+            rollout.RefreshOptions(metadata=metadata, opener=unavailable),
         )
     assert isinstance(raised.value.__context__, urllib.error.URLError), (
         "connectivity domain error lost its URL failure context"
@@ -190,8 +188,7 @@ def test_connectivity_failure_uses_only_valid_stale_cache(
     result = rollout.refresh_base(
         "https://example.test/base",
         cache,
-        metadata=metadata,
-        opener=unavailable,
+        rollout.RefreshOptions(metadata=metadata, opener=unavailable),
     )
 
     assert result.status == "stale-cache", "valid stale cache was not reused"
@@ -223,8 +220,7 @@ def test_http_status_and_persistence_errors_propagate(
         rollout.refresh_base(
             "https://example.test/missing",
             cache,
-            metadata=metadata,
-            opener=missing,
+            rollout.RefreshOptions(metadata=metadata, opener=missing),
         )
     assert raised.value is not_found, "HTTP status became stale-cache success"
 
@@ -237,8 +233,10 @@ def test_http_status_and_persistence_errors_propagate(
         rollout.refresh_base(
             "https://example.test/base",
             cache,
-            metadata=metadata,
-            opener=lambda *_args, **_kwargs: ValidResponse(stem="replacement"),
+            rollout.RefreshOptions(
+                metadata=metadata,
+                opener=lambda *_args, **_kwargs: ValidResponse(stem="replacement"),
+            ),
         )
 
 
@@ -257,8 +255,10 @@ def test_remote_source_requires_https(
         rollout.refresh_base(
             source,
             tmp_path / "cache.toml",
-            metadata=tmp_path / "cache.json",
-            opener=lambda *_args, **_kwargs: ValidResponse(),
+            rollout.RefreshOptions(
+                metadata=tmp_path / "cache.json",
+                opener=lambda *_args, **_kwargs: ValidResponse(),
+            ),
         )
 
 
@@ -313,7 +313,7 @@ def test_default_refresh_uses_guarded_https_opener(
     result = rollout.refresh_base(
         "https://example.test/base.toml",
         tmp_path / "cache.toml",
-        metadata=tmp_path / "cache.json",
+        rollout.RefreshOptions(metadata=tmp_path / "cache.json"),
     )
 
     assert result.status == "refreshed", "guarded opener did not refresh"
@@ -339,8 +339,10 @@ def test_invalid_download_does_not_replace_cache(
         rollout.refresh_base(
             "https://example.test/base",
             cache,
-            metadata=tmp_path / "cache.json",
-            opener=lambda *_args, **_kwargs: InvalidResponse(),
+            rollout.RefreshOptions(
+                metadata=tmp_path / "cache.json",
+                opener=lambda *_args, **_kwargs: InvalidResponse(),
+            ),
         )
     assert not cache.exists(), "invalid remote bytes replaced the cache"
 
@@ -374,8 +376,10 @@ def test_metadata_and_http_freshness_edge_cases(
     current = rollout.refresh_base(
         "https://example.test/base",
         cache,
-        metadata=metadata,
-        opener=lambda *_args, **_kwargs: (_ for _ in ()).throw(not_modified),
+        rollout.RefreshOptions(
+            metadata=metadata,
+            opener=lambda *_args, **_kwargs: (_ for _ in ()).throw(not_modified),
+        ),
     )
     assert current.status == "current", "HTTP 304 did not retain a valid current cache"
 
