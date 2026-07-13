@@ -33,6 +33,7 @@ extend-ignore-re = [
     "(?s)```.*?```",
     "Azure Architecture\\s+Center\\s+\\|\\s+Microsoft Learn",
     "GitHub\\s+Flavored\\s+Markdown",
+    "\\brust-analyzer\\b",
     "`[^`\\n]+`",
 ]
 

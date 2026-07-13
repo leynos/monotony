@@ -189,13 +189,15 @@ class _HttpsRedirectHandler(urllib.request.HTTPRedirectHandler):
     def redirect_request(
         self,
         request: urllib.request.Request,
-        file_pointer: object,
-        code: int,
-        message: str,
-        headers: object,
-        new_url: str,
+        *redirect: object,
     ) -> urllib.request.Request | None:
-        """Follow only redirects whose resolved target remains HTTPS."""
+        """Follow only redirects whose resolved target remains HTTPS.
+
+        The variadic tail preserves the standard library's positional override
+        contract without making transport-library parameters part of this
+        helper's domain-facing interface.
+        """
+        file_pointer, code, message, headers, new_url = redirect
         if urllib.parse.urlsplit(new_url).scheme != "https":
             error_message = f"shared dictionary redirect must use HTTPS: {new_url}"
             raise InsecureSourceError(error_message)
