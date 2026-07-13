@@ -10,6 +10,19 @@ local cache only when the authority is newer, and then applies the narrow
 repository policy in `typos.local.toml`. Edit the local policy and regenerate
 the configuration rather than changing generated entries by hand.
 
+When an HTTPS authority is unreachable, the generator may reuse the existing
+tracked `typos.toml`. That connectivity-only fallback deliberately does not
+apply `typos.local.toml`, so local policy edits remain unapplied until a
+successful refresh regenerates the tracked configuration. HTTP status and
+local persistence failures still fail the gate.
+
+`scripts/typos_rollout_http.py` owns spelling-cache freshness, HTTPS transport
+security, and refresh persistence coordination. Only `scripts/typos_rollout.py`
+may compose that helper with dictionary validation; other project code must
+not reuse its infrastructure internals. This boundary keeps the public
+dictionary-rendering API stable while each Python source remains below the
+repository's 400-line limit.
+
 Architectural rationale for the clock abstraction and the `test-util` feature
 boundary lives in [clock design](clock-design.md). Path ownership and
 repository boundaries live in [repository layout](repository-layout.md).

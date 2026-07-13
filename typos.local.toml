@@ -6,13 +6,16 @@ schema = 1
 stems = []
 
 [words]
-# Official names: Azure Architecture Center and GitHub Flavored Markdown.
-accepted = ["Center", "Flavored"]
+accepted = []
 
 [words.corrections]
 
 [patterns]
-ignore = []
+# Preserve complete formal names while allowing Markdown line wrapping.
+ignore = [
+  "Azure Architecture\\s+Center\\s+\\|\\s+Microsoft Learn",
+  "GitHub\\s+Flavored\\s+Markdown",
+]
 
 [files]
 exclude = []

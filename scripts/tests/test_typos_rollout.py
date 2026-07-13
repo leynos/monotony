@@ -1,48 +1,25 @@
-"""Tests for the repository spelling-policy scripts."""
+"""Dictionary, generator, and atomic-write tests for spelling policy."""
 
 from __future__ import annotations
 
 import ast
-import email.message
 import importlib
 import json
 import os
 import tomllib
-import typing as typ
+import types
 import urllib.error
-import urllib.request
 from pathlib import Path
 
 import pytest
 
-if typ.TYPE_CHECKING:
-    import types
-
 SCRIPT_DIRECTORY = Path(__file__).resolve().parents[1]
-
-
-def test_rollout_integration_contract() -> None:
-    """Rollout scripts parse and the spelling gate requires indexed config."""
-    for script in SCRIPT_DIRECTORY.glob("*.py"):
-        ast.parse(
-            script.read_text(encoding="utf-8"),
-            filename=str(script),
-            feature_version=(3, 13),
-        )
-    makefile = SCRIPT_DIRECTORY.parent.joinpath("Makefile").read_text(encoding="utf-8")
-    assert "git ls-files --error-unmatch typos.toml >/dev/null" in makefile
-
-
-@pytest.fixture(name="rollout_modules")
-def rollout_modules_fixture(
-    monkeypatch: pytest.MonkeyPatch,
-) -> tuple[types.ModuleType, types.ModuleType, types.ModuleType]:
-    """Import the scripts through the same top-level module path used at runtime."""
-    monkeypatch.syspath_prepend(str(SCRIPT_DIRECTORY))
-    names = ("typos_rollout_cache", "typos_rollout", "generate_typos_config")
-    importlib.invalidate_caches()
-    cache, rollout, generator = (importlib.import_module(name) for name in names)
-    return cache, rollout, generator
+RolloutModules = tuple[
+    types.ModuleType,
+    types.ModuleType,
+    types.ModuleType,
+    types.ModuleType,
+]
 
 
 def _dictionary_text(stem: str = "organ") -> str:
@@ -55,95 +32,190 @@ def _dictionary_text(stem: str = "organ") -> str:
     )
 
 
-def test_rollout_generates_oxford_corrections(
-    rollout_modules: tuple[types.ModuleType, types.ModuleType, types.ModuleType],
-) -> None:
-    """The shared renderer accepts Oxford forms and corrects plain-British ones."""
-    _, rollout, _ = rollout_modules
-
-    mappings = rollout.generate_word_mappings(rollout.Dictionary(stems=("organ",)))
-
-    assert mappings["organize"] == "organize"
-    assert mappings["organise"] == "organize"
-    italic_mappings = rollout.generate_word_mappings(
-        rollout.Dictionary(stems=("italic",))
+@pytest.fixture(name="rollout_modules")
+def rollout_modules_fixture(
+    monkeypatch: pytest.MonkeyPatch,
+) -> RolloutModules:
+    """Import scripts through the top-level paths used at runtime."""
+    monkeypatch.syspath_prepend(str(SCRIPT_DIRECTORY))
+    names = (
+        "typos_rollout_cache",
+        "typos_rollout_http",
+        "typos_rollout",
+        "generate_typos_config",
     )
-    assert italic_mappings["italicised"] == "italicized"
+    importlib.invalidate_caches()
+    cache, refresh, rollout, generator = (
+        importlib.import_module(name) for name in names
+    )
+    return cache, refresh, rollout, generator
 
 
-def test_local_refresh_keeps_a_newer_cache(
-    rollout_modules: tuple[types.ModuleType, types.ModuleType, types.ModuleType],
-    tmp_path: Path,
+def test_rollout_integration_contract() -> None:
+    """Scripts parse and the spelling gate checks indexed configuration drift."""
+    for script in SCRIPT_DIRECTORY.glob("*.py"):
+        ast.parse(
+            script.read_text(encoding="utf-8"),
+            filename=str(script),
+            feature_version=(3, 13),
+        )
+    makefile = SCRIPT_DIRECTORY.parent.joinpath("Makefile").read_text(encoding="utf-8")
+    assert "git ls-files --error-unmatch typos.toml >/dev/null" in makefile, (
+        "spelling gate no longer requires an indexed generated config"
+    )
+    assert "git diff --exit-code -- typos.toml" in makefile, (
+        "spelling gate no longer rejects generated-config drift"
+    )
+
+
+def test_rollout_generates_oxford_corrections(
+    rollout_modules: RolloutModules,
 ) -> None:
-    """An older local authority cannot replace a newer untracked cache."""
-    _, rollout, _ = rollout_modules
-    source = tmp_path / "shared.toml"
-    cache = tmp_path / ".typos-base.toml"
-    metadata = tmp_path / ".typos-base.json"
-    source.write_text(_dictionary_text(), encoding="utf-8")
-    source.touch()
-    rollout.refresh_base(source, cache, metadata=metadata)
-    cache.write_text(_dictionary_text("newer"), encoding="utf-8")
-    cache.touch()
-    source_mtime = source.stat().st_mtime_ns
-    cache_mtime = max(cache.stat().st_mtime_ns, source_mtime + 1)
-    os.utime(cache, ns=(cache_mtime, cache_mtime))
+    """The renderer accepts Oxford forms and corrects plain-British ones."""
+    _, _, rollout, _ = rollout_modules
 
-    result = rollout.refresh_base(source, cache, metadata=metadata)
+    mappings = rollout.generate_word_mappings(
+        rollout.Dictionary(stems=("organ", "recogn"))
+    )
 
-    assert result.status == "current"
-    assert rollout.load_dictionary(cache).stems == ("newer",)
+    assert mappings["organize"] == "organize", "Oxford verb was not accepted"
+    assert mappings["organise"] == "organize", "plain-British verb was not corrected"
+    assert mappings["recognizably"] == "recognizably", "Oxford adverb was not accepted"
+    assert mappings["recognisably"] == "recognizably", (
+        "plain-British adverb was not corrected"
+    )
 
 
-def test_https_failure_reuses_valid_tracked_config(
-    rollout_modules: tuple[types.ModuleType, types.ModuleType, types.ModuleType],
+def test_connectivity_failure_reuses_unchanged_tracked_config(
+    rollout_modules: RolloutModules,
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """A clean network-restricted checkout retains its reviewed policy."""
-    _, rollout, generator = rollout_modules
+    """Tracked fallback preserves its reviewed config without merging local policy."""
+    _, _, rollout, generator = rollout_modules
     tracked_config = tmp_path / "typos.toml"
-    tracked_config.write_text('[default]\nlocale = "en-gb"\n', encoding="utf-8")
+    reviewed = '[default]\nlocale = "en-gb"\n'
+    tracked_config.write_text(reviewed, encoding="utf-8")
+    (tmp_path / "typos.local.toml").write_text(
+        _dictionary_text("replacement"),
+        encoding="utf-8",
+    )
 
     def unavailable(*_args: object, **_kwargs: object) -> None:
         """Model an unavailable HTTPS authority."""
-        raise urllib.error.URLError("offline")
+        message = "offline"
+        raise rollout.NetworkUnavailableError(message) from urllib.error.URLError(
+            message
+        )
 
     monkeypatch.setattr(rollout, "refresh_base", unavailable)
 
-    result = generator.main(repository=tmp_path, source="https://example.invalid/base")
-
-    assert result.status == "tracked-config"
-    assert result.cache == tracked_config
-
-
-def test_dictionary_validation_rejects_invalid_documents(
-    rollout_modules: tuple[types.ModuleType, types.ModuleType, types.ModuleType],
-    tmp_path: Path,
-) -> None:
-    """Schema, table, string-list and correction types remain validated."""
-    _, rollout, _ = rollout_modules
-    source = tmp_path / "base.toml"
-    invalid_documents = (
-        _dictionary_text().replace("schema = 1", "schema = 2"),
-        _dictionary_text().replace('[oxford]\nstems = ["organ"]', 'oxford = "bad"'),
-        _dictionary_text().replace('stems = ["organ"]', "stems = [1]"),
-        _dictionary_text().replace(
-            "[words.corrections]", "[words.corrections]\nteh = 1"
-        ),
+    result = generator.main(
+        repository=tmp_path,
+        source="https://example.invalid/base",
     )
 
-    for document in invalid_documents:
-        source.write_text(document, encoding="utf-8")
-        with pytest.raises((TypeError, ValueError)):
-            rollout.load_dictionary(source)
+    assert result.status == "tracked-config", (
+        "connectivity fallback did not reuse the reviewed config"
+    )
+    assert result.cache == tracked_config, "fallback returned the wrong tracked path"
+    assert tracked_config.read_text(encoding="utf-8") == reviewed, (
+        "connectivity fallback unexpectedly applied local policy"
+    )
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        pytest.param(
+            urllib.error.HTTPError(
+                "https://example.test/missing",
+                404,
+                "Not Found",
+                hdrs=None,
+                fp=None,
+            ),
+            id="http-status",
+        ),
+        pytest.param(PermissionError("cache is read-only"), id="persistence"),
+    ],
+)
+def test_generator_propagates_non_connectivity_failures(
+    rollout_modules: RolloutModules,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    error: OSError,
+) -> None:
+    """HTTP status and persistence failures cannot become tracked success."""
+    _, _, rollout, generator = rollout_modules
+    (tmp_path / "typos.toml").write_text(
+        '[default]\nlocale = "en-gb"\n',
+        encoding="utf-8",
+    )
+
+    def fail(*_args: object, **_kwargs: object) -> None:
+        """Raise the selected non-connectivity failure."""
+        raise error
+
+    monkeypatch.setattr(rollout, "refresh_base", fail)
+
+    with pytest.raises(type(error)) as raised:
+        generator.main(
+            repository=tmp_path,
+            source="https://example.test/base",
+        )
+
+    assert raised.value is error, (
+        "generator replaced a non-connectivity failure with fallback success"
+    )
+
+
+INVALID_DOCUMENTS = (
+    pytest.param(
+        _dictionary_text().replace("schema = 1", "schema = 2"),
+        id="schema",
+    ),
+    pytest.param(
+        _dictionary_text().replace(
+            '[oxford]\nstems = ["organ"]',
+            'oxford = "bad"',
+        ),
+        id="table",
+    ),
+    pytest.param(
+        _dictionary_text().replace('stems = ["organ"]', "stems = [1]"),
+        id="string-list",
+    ),
+    pytest.param(
+        _dictionary_text().replace(
+            "[words.corrections]",
+            "[words.corrections]\nteh = 1",
+        ),
+        id="correction",
+    ),
+)
+
+
+@pytest.mark.parametrize("document", INVALID_DOCUMENTS)
+def test_dictionary_validation_rejects_invalid_documents(
+    rollout_modules: RolloutModules,
+    tmp_path: Path,
+    document: str,
+) -> None:
+    """Schema, table, string-list and correction types remain validated."""
+    _, _, rollout, _ = rollout_modules
+    source = tmp_path / "base.toml"
+    source.write_text(document, encoding="utf-8")
+
+    with pytest.raises((TypeError, ValueError)):
+        rollout.load_dictionary(source)
 
 
 def test_merge_rejects_conflicting_corrections(
-    rollout_modules: tuple[types.ModuleType, types.ModuleType, types.ModuleType],
+    rollout_modules: RolloutModules,
 ) -> None:
     """A local overlay cannot silently weaken a shared correction."""
-    _, rollout, _ = rollout_modules
+    _, _, rollout, _ = rollout_modules
     base = rollout.Dictionary(corrections=(("teh", "the"),))
     local = rollout.Dictionary(corrections=(("teh", "ten"),))
 
@@ -152,11 +224,11 @@ def test_merge_rejects_conflicting_corrections(
 
 
 def test_render_and_write_are_deterministic_valid_toml(
-    rollout_modules: tuple[types.ModuleType, types.ModuleType, types.ModuleType],
+    rollout_modules: RolloutModules,
     tmp_path: Path,
 ) -> None:
     """Rendering is stable, parseable and atomically installed."""
-    _, rollout, _ = rollout_modules
+    _, _, rollout, _ = rollout_modules
     dictionary = rollout.Dictionary(
         stems=("organ",),
         accepted=("proper-name",),
@@ -168,40 +240,131 @@ def test_render_and_write_are_deterministic_valid_toml(
     first = rollout.render_typos_config(dictionary)
     rollout.write_config(output, dictionary)
 
-    assert first == rollout.render_typos_config(dictionary)
-    assert output.read_text(encoding="utf-8") == first
-    assert tomllib.loads(first)["default"]["locale"] == "en-gb"
-    assert list(output.parent.glob(".typos.toml.*")) == []
+    assert first == rollout.render_typos_config(dictionary), (
+        "identical dictionaries rendered differently"
+    )
+    assert output.read_text(encoding="utf-8") == first, (
+        "atomic write changed rendered configuration"
+    )
+    assert tomllib.loads(first)["default"]["locale"] == "en-gb", (
+        "rendered configuration lost the British locale"
+    )
+    assert list(output.parent.glob(".typos.toml.*")) == [], (
+        "successful atomic write left a temporary file"
+    )
+
+
+@pytest.mark.parametrize("failure_stage", ["write", "close", "replace"])
+def test_atomic_write_cleans_temporary_file_after_failure(
+    rollout_modules: RolloutModules,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    failure_stage: str,
+) -> None:
+    """Write, close, and replacement failures remove the temporary file."""
+    cache_module, _, _, _ = rollout_modules
+    temporary = tmp_path / ".typos.toml.failure"
+    temporary.touch()
+
+    class FailingStream:
+        """Model a named temporary stream with one selected failure."""
+
+        name = str(temporary)
+
+        def __enter__(self) -> FailingStream:
+            """Enter the fake stream context."""
+            return self
+
+        def write(self, content: bytes) -> None:
+            """Write bytes unless this case models a write failure."""
+            if failure_stage == "write":
+                raise OSError("write failure")
+            temporary.write_bytes(content)
+
+        def __exit__(self, *_args: object) -> None:
+            """Close unless this case models a close failure."""
+            if failure_stage == "close":
+                raise OSError("close failure")
+
+    monkeypatch.setattr(
+        cache_module.tempfile,
+        "NamedTemporaryFile",
+        lambda **_kwargs: FailingStream(),
+    )
+    if failure_stage == "replace":
+
+        def fail_replace(_path: Path, _destination: Path) -> None:
+            """Model an atomic replacement failure."""
+            raise OSError("replace failure")
+
+        monkeypatch.setattr(cache_module.pathlib.Path, "replace", fail_replace)
+
+    with pytest.raises(OSError, match=f"{failure_stage} failure"):
+        cache_module.atomic_write(tmp_path / "typos.toml", b"content")
+
+    assert not temporary.exists(), f"temporary file survived {failure_stage} failure"
+
+
+def test_local_refresh_keeps_a_newer_cache(
+    rollout_modules: RolloutModules,
+    tmp_path: Path,
+) -> None:
+    """An older local authority cannot replace a newer untracked cache."""
+    _, _, rollout, _ = rollout_modules
+    source = tmp_path / "shared.toml"
+    cache = tmp_path / ".typos-base.toml"
+    metadata = tmp_path / ".typos-base.json"
+    source.write_text(_dictionary_text(), encoding="utf-8")
+    source.touch()
+    rollout.refresh_base(source, cache, metadata=metadata)
+    cache.write_text(_dictionary_text("newer"), encoding="utf-8")
+    cache_mtime = max(cache.stat().st_mtime_ns, source.stat().st_mtime_ns + 1)
+    os.utime(cache, ns=(cache_mtime, cache_mtime))
+
+    result = rollout.refresh_base(source, cache, metadata=metadata)
+
+    assert result.status == "current", "older local authority replaced a newer cache"
+    assert rollout.load_dictionary(cache).stems == ("newer",), (
+        "current local refresh changed cached policy"
+    )
 
 
 def test_offline_refresh_requires_and_reuses_valid_cache(
-    rollout_modules: tuple[types.ModuleType, types.ModuleType, types.ModuleType],
+    rollout_modules: RolloutModules,
     tmp_path: Path,
 ) -> None:
     """Offline mode fails closed before reusing a validated cache."""
-    _, rollout, _ = rollout_modules
+    _, _, rollout, _ = rollout_modules
     cache = tmp_path / "base.toml"
     metadata = tmp_path / "base.json"
 
     with pytest.raises(FileNotFoundError, match="no cached shared dictionary"):
         rollout.refresh_base(
-            "https://example.invalid/base", cache, metadata=metadata, offline=True
+            "https://example.invalid/base",
+            cache,
+            metadata=metadata,
+            offline=True,
         )
 
     cache.write_text(_dictionary_text(), encoding="utf-8")
     result = rollout.refresh_base(
-        "https://example.invalid/base", cache, metadata=metadata, offline=True
+        "https://example.invalid/base",
+        cache,
+        metadata=metadata,
+        offline=True,
     )
 
-    assert result.status == "offline-cache"
+    assert result.status == "offline-cache", (
+        "offline refresh did not reuse a valid cache"
+    )
 
 
 def test_local_refresh_switches_authority_and_records_metadata(
-    rollout_modules: tuple[types.ModuleType, types.ModuleType, types.ModuleType],
+    rollout_modules: RolloutModules,
     tmp_path: Path,
 ) -> None:
     """A different explicit authority replaces a cache regardless of mtime."""
-    _, rollout, _ = rollout_modules
+    _, _, rollout, _ = rollout_modules
     first = tmp_path / "first.toml"
     second = tmp_path / "second.toml"
     cache = tmp_path / "cache.toml"
@@ -214,183 +377,13 @@ def test_local_refresh_switches_authority_and_records_metadata(
 
     result = rollout.refresh_base(second, cache, metadata=metadata)
 
-    assert result.status == "refreshed"
-    assert rollout.load_dictionary(cache).stems == ("second",)
-    assert json.loads(metadata.read_text(encoding="utf-8"))["source"] == str(
-        second.resolve()
+    assert result.status == "refreshed", (
+        "authority switch did not refresh the local cache"
     )
-
-
-def test_http_refresh_scopes_validators_and_preserves_newer_cache(
-    rollout_modules: tuple[types.ModuleType, types.ModuleType, types.ModuleType],
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
-) -> None:
-    """Remote refresh reuses validators only for their original source."""
-    _, rollout, _ = rollout_modules
-    cache = tmp_path / "cache.toml"
-    metadata = tmp_path / "cache.json"
-    requests: list[urllib.request.Request] = []
-
-    class Response:
-        """Provide the HTTP response surface consumed by the helper."""
-
-        status = 200
-        headers: typ.ClassVar[dict[str, str]] = {
-            "ETag": '"estate-v1"',
-            "Last-Modified": "Fri, 10 Jul 2026 08:00:00 GMT",
-        }
-
-        def read(self) -> bytes:
-            """Return a valid shared dictionary."""
-            return _dictionary_text().encode()
-
-        def __enter__(self) -> Response:
-            """Enter the fake response context."""
-            return self
-
-        def __exit__(self, *_args: object) -> None:
-            """Leave the fake response context."""
-
-    def open_response(request: urllib.request.Request, *, timeout: float) -> Response:
-        """Capture the request passed to the network boundary."""
-        assert timeout == pytest.approx(30.0)
-        requests.append(request)
-        return Response()
-
-    monkeypatch.setattr(rollout.urllib.request, "urlopen", open_response)
-
-    first = rollout.refresh_base(
-        "https://example.test/base.toml", cache, metadata=metadata
+    assert rollout.load_dictionary(cache).stems == ("second",), (
+        "authority switch retained the previous dictionary"
     )
-    second = rollout.refresh_base(
-        "https://example.test/base.toml", cache, metadata=metadata
+    saved = json.loads(metadata.read_text(encoding="utf-8"))
+    assert saved["source"] == str(second.resolve()), (
+        "authority switch persisted the wrong source identity"
     )
-    replacement = rollout.refresh_base(
-        "https://example.test/replacement.toml", cache, metadata=metadata
-    )
-
-    assert first.status == "refreshed"
-    assert second.status == "current"
-    assert requests[1].get_header("If-none-match") == '"estate-v1"'
-    assert replacement.status == "refreshed"
-    assert requests[2].get_header("If-none-match") is None
-    assert requests[2].get_header("If-modified-since") is None
-
-
-def test_remote_failure_reuses_only_a_valid_stale_cache(
-    rollout_modules: tuple[types.ModuleType, types.ModuleType, types.ModuleType],
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
-) -> None:
-    """Network failure keeps validated data and propagates without it."""
-    _, rollout, _ = rollout_modules
-    cache = tmp_path / "cache.toml"
-    metadata = tmp_path / "cache.json"
-
-    def fail(*_args: object, **_kwargs: object) -> None:
-        """Model an unavailable remote authority."""
-        message = "offline"
-        raise urllib.error.URLError(message)
-
-    monkeypatch.setattr(rollout.urllib.request, "urlopen", fail)
-
-    with pytest.raises(urllib.error.URLError):
-        rollout.refresh_base("https://example.test/base", cache, metadata=metadata)
-
-    cache.write_text(_dictionary_text(), encoding="utf-8")
-    result = rollout.refresh_base("https://example.test/base", cache, metadata=metadata)
-
-    assert result.status == "stale-cache"
-
-
-def test_remote_refresh_rejects_insecure_and_invalid_content(
-    rollout_modules: tuple[types.ModuleType, types.ModuleType, types.ModuleType],
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
-) -> None:
-    """The remote boundary requires HTTPS and validates bytes before install."""
-    _, rollout, _ = rollout_modules
-    cache = tmp_path / "cache.toml"
-    metadata = tmp_path / "cache.json"
-
-    with pytest.raises(ValueError, match="must use HTTPS"):
-        rollout.refresh_base("http://example.test/base", cache, metadata=metadata)
-
-    class InvalidResponse:
-        """Return malformed TOML from an otherwise successful response."""
-
-        status = 200
-        headers: typ.ClassVar[dict[str, str]] = {}
-
-        def read(self) -> bytes:
-            """Return malformed bytes."""
-            return b"not = [valid"
-
-        def __enter__(self) -> InvalidResponse:
-            """Enter the fake response context."""
-            return self
-
-        def __exit__(self, *_args: object) -> None:
-            """Leave the fake response context."""
-
-    monkeypatch.setattr(
-        rollout.urllib.request, "urlopen", lambda *_args, **_kwargs: InvalidResponse()
-    )
-
-    with pytest.raises(tomllib.TOMLDecodeError):
-        rollout.refresh_base("https://example.test/base", cache, metadata=metadata)
-    assert not cache.exists()
-
-
-def test_metadata_reader_handles_invalid_and_non_object_json(
-    rollout_modules: tuple[types.ModuleType, types.ModuleType, types.ModuleType],
-    tmp_path: Path,
-) -> None:
-    """Malformed or non-object freshness metadata is safely ignored."""
-    _, rollout, _ = rollout_modules
-    metadata = tmp_path / "cache.json"
-
-    metadata.write_text("not-json", encoding="utf-8")
-    assert rollout._read_metadata(metadata) == {}
-    metadata.write_text("[]", encoding="utf-8")
-    assert rollout._read_metadata(metadata) == {}
-
-
-def test_http_error_translation_handles_not_modified_and_stale_cache(
-    rollout_modules: tuple[types.ModuleType, types.ModuleType, types.ModuleType],
-    tmp_path: Path,
-) -> None:
-    """HTTP status handling distinguishes current, stale and absent data."""
-    _, rollout, _ = rollout_modules
-    cache = tmp_path / "cache.toml"
-    cache.write_text(_dictionary_text(), encoding="utf-8")
-    headers = email.message.Message()
-    not_modified = urllib.error.HTTPError(
-        "https://example.test/base", 304, "not modified", headers, None
-    )
-    unavailable = urllib.error.HTTPError(
-        "https://example.test/base", 503, "unavailable", headers, None
-    )
-
-    assert rollout._http_error_result(cache, not_modified).status == "current"
-    assert rollout._http_error_result(cache, unavailable).status == "stale-cache"
-    cache.unlink()
-    with pytest.raises(urllib.error.HTTPError):
-        rollout._http_error_result(cache, unavailable)
-
-
-def test_remote_freshness_uses_dates_and_falls_back_on_invalid_values(
-    rollout_modules: tuple[types.ModuleType, types.ModuleType, types.ModuleType],
-) -> None:
-    """Last-Modified comparison remains conservative for malformed dates."""
-    _, rollout, _ = rollout_modules
-
-    assert rollout._remote_is_not_newer(
-        {"last_modified": "Fri, 10 Jul 2026 08:00:00 GMT"},
-        {"Last-Modified": "Fri, 10 Jul 2026 07:00:00 GMT"},
-    )
-    assert rollout._remote_is_not_newer(
-        {"last_modified": "invalid"}, {"Last-Modified": "invalid"}
-    )
-    assert not rollout._remote_is_not_newer({}, {"Last-Modified": "invalid"})
