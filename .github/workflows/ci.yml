@@ -18,8 +18,9 @@ jobs:
       - uses: actions/checkout@e8d4307400f9427dba7cb98e488d6ab85f1cec5f
         with:
           persist-credentials: false
+          fetch-depth: 0
       - name: Setup Rust
-        uses: leynos/shared-actions/.github/actions/setup-rust@7da7c6d89033d13cbb1c64803d108ddca97e69c2
+        uses: leynos/shared-actions/.github/actions/setup-rust@29eea2635ee0f92e42c05f4cd360b7f1a2f00b12
       - name: Install mold linker
         if: runner.os == 'Linux'
         run: |
@@ -94,7 +95,7 @@ jobs:
           echo "Coverage CFLAGS: -fuse-ld=lld"
           echo "Coverage LDFLAGS: -fuse-ld=lld"
       - name: Test and Measure Coverage
-        uses: leynos/shared-actions/.github/actions/generate-coverage@7da7c6d89033d13cbb1c64803d108ddca97e69c2
+        uses: leynos/shared-actions/.github/actions/generate-coverage@29eea2635ee0f92e42c05f4cd360b7f1a2f00b12
         env:
           CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER: clang
           RUSTFLAGS: -C link-arg=-fuse-ld=lld
@@ -106,12 +107,18 @@ jobs:
           features: test-util
           output-path: lcov.info
           format: lcov
-      - name: Upload coverage data to CodeScene
-        env:
-          CS_ACCESS_TOKEN: ${{ secrets.CS_ACCESS_TOKEN }}
-        if: ${{ env.CS_ACCESS_TOKEN }}
-        uses: leynos/shared-actions/.github/actions/upload-codescene-coverage@feeb29c2be7b343cb62b0ffcb1cca176eb5b4db9
-        with:
-          format: lcov
-          access-token: ${{ env.CS_ACCESS_TOKEN }}
-          installer-checksum: ${{ vars.CODESCENE_CLI_SHA256 }}
+          with-ratchet: 'true'
+      # The `mode: check` PR coverage gate is deliberately not wired in
+      # yet: estate-wide, only mxd's CodeScene project has a coverage
+      # gates configuration today, and `cs-coverage check` fails every
+      # other project with "HTTP call succeeded, but the received
+      # project-config isn't valid. Lacks the gates configuration." —
+      # a CodeScene-side per-project setting, not a CI defect (see
+      # ddlint#287 and chutoro#156). This project's own former PR
+      # upload step is removed here too: `cs-coverage upload` is
+      # rejected outright on non-analysed branches, so running it on
+      # pull requests would actively break the job once
+      # CS_ACCESS_TOKEN is set. Coverage now uploads only from
+      # coverage-main.yml on push to main. Add the `mode: check` step
+      # in a fast-follow once this project's coverage gate is
+      # confirmed enabled CodeScene-side.
