@@ -21,14 +21,16 @@ if typ.TYPE_CHECKING:
 SCRIPT_DIRECTORY = Path(__file__).resolve().parents[1]
 
 
-def test_rollout_scripts_support_python_313() -> None:
-    """Every rollout script parses with the declared minimum Python version."""
+def test_rollout_integration_contract() -> None:
+    """Rollout scripts parse and the spelling gate requires indexed config."""
     for script in SCRIPT_DIRECTORY.glob("*.py"):
         ast.parse(
             script.read_text(encoding="utf-8"),
             filename=str(script),
             feature_version=(3, 13),
         )
+    makefile = SCRIPT_DIRECTORY.parent.joinpath("Makefile").read_text(encoding="utf-8")
+    assert "git ls-files --error-unmatch typos.toml >/dev/null" in makefile
 
 
 @pytest.fixture(name="rollout_modules")
@@ -63,6 +65,10 @@ def test_rollout_generates_oxford_corrections(
 
     assert mappings["organize"] == "organize"
     assert mappings["organise"] == "organize"
+    italic_mappings = rollout.generate_word_mappings(
+        rollout.Dictionary(stems=("italic",))
+    )
+    assert italic_mappings["italicised"] == "italicized"
 
 
 def test_local_refresh_keeps_a_newer_cache(
@@ -215,12 +221,12 @@ def test_local_refresh_switches_authority_and_records_metadata(
     )
 
 
-def test_http_refresh_uses_validators_and_preserves_newer_cache(
+def test_http_refresh_scopes_validators_and_preserves_newer_cache(
     rollout_modules: tuple[types.ModuleType, types.ModuleType, types.ModuleType],
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """Remote refresh persists validators and sends them on the next request."""
+    """Remote refresh reuses validators only for their original source."""
     _, rollout, _ = rollout_modules
     cache = tmp_path / "cache.toml"
     metadata = tmp_path / "cache.json"
@@ -260,10 +266,16 @@ def test_http_refresh_uses_validators_and_preserves_newer_cache(
     second = rollout.refresh_base(
         "https://example.test/base.toml", cache, metadata=metadata
     )
+    replacement = rollout.refresh_base(
+        "https://example.test/replacement.toml", cache, metadata=metadata
+    )
 
     assert first.status == "refreshed"
     assert second.status == "current"
     assert requests[1].get_header("If-none-match") == '"estate-v1"'
+    assert replacement.status == "refreshed"
+    assert requests[2].get_header("If-none-match") is None
+    assert requests[2].get_header("If-modified-since") is None
 
 
 def test_remote_failure_reuses_only_a_valid_stale_cache(

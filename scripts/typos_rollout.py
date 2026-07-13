@@ -365,6 +365,8 @@ def _refresh_http(
 ) -> RefreshResult:
     """Refresh a cache from a validated HTTPS source with stale fallback."""
     saved = _read_metadata(metadata)
+    if saved.get("source") != source:
+        saved = {}
     request = _https_request(source, _conditional_headers(saved))
     try:
         with urllib.request.urlopen(  # noqa: S310 - _https_request rejects non-HTTPS URLs.
