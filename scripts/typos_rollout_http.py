@@ -64,6 +64,15 @@ class _RefreshContext:
     validate: ContentValidator
 
 
+@dc.dataclass(frozen=True, slots=True)
+class _RemoteRequestState:
+    """Group one remote authority with its cache and saved validators."""
+
+    source: str
+    targets: typos_rollout_cache.CacheTargets
+    saved: cabc.Mapping[str, object]
+
+
 class NetworkUnavailableError(OSError):
     """Report that the remote dictionary authority could not be reached."""
 
@@ -226,48 +235,46 @@ def _https_request(
 
 
 def _write_remote_cache(
-    source: str,
-    targets: typos_rollout_cache.CacheTargets,
+    state: _RemoteRequestState,
     content: bytes,
     headers: cabc.Mapping[str, str],
     validate: ContentValidator,
 ) -> typos_rollout_cache.RefreshResult:
     """Validate and atomically persist an HTTP dictionary response."""
     validate(content)
-    typos_rollout_cache.atomic_write(targets.cache, content)
+    typos_rollout_cache.atomic_write(state.targets.cache, content)
     _write_metadata(
-        targets.metadata,
+        state.targets.metadata,
         {
-            "source": source,
+            "source": state.source,
             "etag": headers.get("ETag"),
             "last_modified": headers.get("Last-Modified"),
         },
     )
-    return typos_rollout_cache.RefreshResult("refreshed", targets.cache)
+    return typos_rollout_cache.RefreshResult("refreshed", state.targets.cache)
 
 
 def _remote_response_result(
-    source: str,
-    targets: typos_rollout_cache.CacheTargets,
-    saved: cabc.Mapping[str, object],
+    state: _RemoteRequestState,
     response: typos_rollout_cache.RemoteResponse,
     validate: ContentValidator,
 ) -> typos_rollout_cache.RefreshResult:
     """Return the cache result for a successful HTTP response."""
-    if response.status == HTTP_NOT_MODIFIED and _valid_cache(targets.cache, validate):
-        return typos_rollout_cache.RefreshResult("current", targets.cache)
-    if _valid_cache(targets.cache, validate) and _remote_is_not_newer(
-        saved, response.headers
+    if response.status == HTTP_NOT_MODIFIED and _valid_cache(
+        state.targets.cache, validate
     ):
-        return typos_rollout_cache.RefreshResult("current", targets.cache)
+        return typos_rollout_cache.RefreshResult("current", state.targets.cache)
+    if _valid_cache(state.targets.cache, validate) and _remote_is_not_newer(
+        state.saved, response.headers
+    ):
+        return typos_rollout_cache.RefreshResult("current", state.targets.cache)
     try:
         content = response.read()
     except urllib.error.URLError as error:
-        message = f"shared dictionary authority is unavailable: {source}"
+        message = f"shared dictionary authority is unavailable: {state.source}"
         raise NetworkUnavailableError(message) from error
     return _write_remote_cache(
-        source,
-        targets,
+        state,
         content,
         response.headers,
         validate,
@@ -299,35 +306,40 @@ def _http_error_result(
 def _refresh_http(
     source: str,
     cache: pathlib.Path,
-    metadata: pathlib.Path,
-    validate: ContentValidator,
-    opener: Opener | None,
+    context: _RefreshContext,
 ) -> typos_rollout_cache.RefreshResult:
     """Refresh a cache from a validated HTTPS source with stale fallback."""
-    saved = _read_metadata(metadata)
+    saved = _read_metadata(context.options.metadata)
     if saved.get("source") != source:
         saved = {}
     request = _https_request(source, _conditional_headers(saved))
-    open_remote = _HTTPS_OPENER.open if opener is None else opener
+    open_remote = (
+        _HTTPS_OPENER.open if context.options.opener is None else context.options.opener
+    )
     try:
         response_context = open_remote(request, timeout=30.0)
     except urllib.error.HTTPError as error:
-        return _http_error_result(cache, error, validate)
+        return _http_error_result(cache, error, context.validate)
     except urllib.error.URLError:
         message = f"shared dictionary authority is unavailable: {source}"
         unavailable = NetworkUnavailableError(message)
-        return _stale_cache_or_raise(cache, unavailable, validate)
+        return _stale_cache_or_raise(cache, unavailable, context.validate)
     with response_context as response:
         try:
             return _remote_response_result(
-                source,
-                typos_rollout_cache.CacheTargets(cache, metadata),
-                saved,
+                _RemoteRequestState(
+                    source,
+                    typos_rollout_cache.CacheTargets(
+                        cache,
+                        context.options.metadata,
+                    ),
+                    saved,
+                ),
                 response,
-                validate,
+                context.validate,
             )
         except NetworkUnavailableError as error:
-            return _stale_cache_or_raise(cache, error, validate)
+            return _stale_cache_or_raise(cache, error, context.validate)
 
 
 def refresh_base(
@@ -374,6 +386,4 @@ def refresh_base(
         return _refresh_local(
             pathlib.Path(source), cache, options.metadata, context.validate
         )
-    return _refresh_http(
-        str(source), cache, options.metadata, context.validate, options.opener
-    )
+    return _refresh_http(str(source), cache, context)
