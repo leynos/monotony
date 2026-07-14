@@ -21,12 +21,28 @@ The production API is deliberately small:
 - `MonotonicClock` is a `Send + Sync` trait with one method, `now()`.
 - `StdMonotonicClock` is the production adapter backed by
   `std::time::Instant::now()`.
+- `MonotonicClockExt` provides narrow convenience methods, such as
+  `elapsed_since`, without changing the core trait contract.
 - The production dependency set is empty.
 
 This keeps the public boundary easy to implement in downstream crates and
 avoids coupling application logic to a concrete clock source. Consumers can use
 `&dyn MonotonicClock`, generic parameters, or their own clock implementations
 depending on the surrounding design.
+
+## Clock, not sleeper
+
+Monotony intentionally measures monotonic elapsed time. It does not own sleep,
+timers, async runtimes, retry policy, timeout policy, or logical-time scaling.
+Those behaviours belong in downstream application code because blocking,
+asynchronous, and accelerated test sleepers each carry different operational
+trade-offs.
+
+Consumers that need both measurement and waiting should inject two boundaries: a
+`MonotonicClock` for observation and a local sleeper or timer adapter for
+policy. This keeps crates such as `catnap` free to choose blocking sleep, async
+runtime sleep, or test-time acceleration without making those choices part of
+Monotony's public API.
 
 ## Test utilities
 
@@ -37,6 +53,8 @@ behind the `test-util` feature:
 - `QueuedMonotonicClock` supports tests that need a known sequence of instants.
 - `ManualMonotonicClock` supports polling and timeout tests that advance time
   explicitly.
+- `SharedManualMonotonicClock` supports tests where code under test owns one
+  clock handle and the test advances time from another cloned handle.
 
 These helpers are not hidden behind `#[cfg(test)]` because downstream crates
 cannot use a dependency's private test-only items in their own integration

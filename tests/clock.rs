@@ -4,7 +4,14 @@
 use std::time::{Duration, Instant};
 
 #[cfg(feature = "test-util")]
-use monotony::test_util::{FixedMonotonicClock, ManualMonotonicClock, QueuedMonotonicClock};
+use monotony::MonotonicClockExt;
+#[cfg(feature = "test-util")]
+use monotony::test_util::{
+    FixedMonotonicClock,
+    ManualMonotonicClock,
+    QueuedMonotonicClock,
+    SharedManualMonotonicClock,
+};
 use monotony::{MonotonicClock, StdMonotonicClock};
 #[cfg(feature = "test-util")]
 use proptest::prelude::*;
@@ -81,6 +88,51 @@ fn manual_clock_advances_from_initial_instant(#[case] elapsed: Duration) {
     assert_eq!(clock.now().duration_since(started_at), elapsed);
 }
 
+#[cfg(feature = "test-util")]
+#[test]
+fn elapsed_since_reports_duration_from_start() {
+    let started_at = Instant::now();
+    let finished_at = started_at + Duration::from_millis(275);
+    let clock = QueuedMonotonicClock::from_instants([finished_at]);
+
+    assert_eq!(clock.elapsed_since(started_at), Duration::from_millis(275));
+}
+
+#[cfg(feature = "test-util")]
+#[test]
+fn shared_manual_clock_observes_advances_from_cloned_handle() {
+    let started_at = Instant::now();
+    let observer = SharedManualMonotonicClock::new(started_at);
+    let controller = observer.clone();
+
+    controller.advance(Duration::from_secs(4));
+
+    assert_eq!(
+        observer.now().duration_since(started_at),
+        Duration::from_secs(4)
+    );
+}
+
+#[cfg(feature = "test-util")]
+#[test]
+fn shared_manual_clock_accumulates_advances_across_handles() {
+    let started_at = Instant::now();
+    let first = SharedManualMonotonicClock::new(started_at);
+    let second = first.clone();
+
+    first.advance(Duration::from_secs(2));
+    second.advance(Duration::from_secs(3));
+
+    assert_eq!(
+        first.now().duration_since(started_at),
+        Duration::from_secs(5)
+    );
+    assert_eq!(
+        second.now().duration_since(started_at),
+        Duration::from_secs(5)
+    );
+}
+
 #[test]
 fn standard_clock_can_be_used_through_the_trait() {
     let clock: &dyn MonotonicClock = &StdMonotonicClock;
@@ -126,5 +178,36 @@ proptest! {
             prop_assert!(current >= previous);
             previous = current;
         }
+    }
+
+    #[test]
+    fn shared_manual_clock_preserves_elapsed_time_across_clone_interleavings(
+        actions in proptest::collection::vec((any::<bool>(), 0_u64..1_000), 0..32),
+    ) {
+        let started_at = Instant::now();
+        let observed_clock = SharedManualMonotonicClock::new(started_at);
+        let mut handles = vec![observed_clock.clone()];
+        let mut total_elapsed = Duration::ZERO;
+
+        for (should_clone, advance_millis) in actions {
+            if should_clone && let Some(handle) = handles.last().cloned() {
+                handles.push(handle);
+            }
+
+            let elapsed = Duration::from_millis(advance_millis);
+
+            if let Some(handle) = handles.last() {
+                handle.advance(elapsed);
+                total_elapsed += elapsed;
+            }
+        }
+
+        for handle in handles {
+            prop_assert_eq!(handle.now().duration_since(started_at), total_elapsed);
+        }
+        prop_assert_eq!(
+            observed_clock.now().duration_since(started_at),
+            total_elapsed
+        );
     }
 }

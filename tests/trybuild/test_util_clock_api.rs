@@ -4,7 +4,9 @@ use std::time::{Duration, Instant};
 
 use monotony::{
     MonotonicClock,
-    test_util::{FixedMonotonicClock, ManualMonotonicClock, QueuedMonotonicClock},
+    test_util::{
+        FixedMonotonicClock, ManualMonotonicClock, QueuedMonotonicClock, SharedManualMonotonicClock,
+    },
 };
 
 fn assert_clock(clock: &impl MonotonicClock) {
@@ -18,10 +20,14 @@ fn main() {
     let fixed = FixedMonotonicClock::with_elapsed(Duration::from_millis(1));
     let queued = QueuedMonotonicClock::from_instants([started_at, later]);
     let manual = ManualMonotonicClock::new(started_at);
+    let shared = SharedManualMonotonicClock::new(started_at);
+    let shared_controller = shared.clone();
 
     manual.advance(Duration::from_millis(1));
+    shared_controller.advance(Duration::from_millis(1));
 
     assert_clock(&fixed);
     assert_clock(&queued);
     assert_clock(&manual);
+    assert_clock(&shared);
 }
