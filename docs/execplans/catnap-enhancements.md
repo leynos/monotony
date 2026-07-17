@@ -506,7 +506,7 @@ Rollback is a normal Git revert or patch reversal of the touched files:
 `tests/users_guide_examples.rs`, `docs/clock-design.md`, `docs/users-guide.md`,
 and `README.md`.
 
-## Artifacts and Notes
+## Artefacts and Notes
 
 Current relevant files:
 
