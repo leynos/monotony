@@ -1,5 +1,8 @@
 # Monotony
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](
+https://deepwiki.com/leynos/monotony)
+
 *Ticking away the moments that make up a dull day.*
 
 Monotony is a small Rust crate for injecting monotonic clocks. It gives
