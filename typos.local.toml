@@ -15,6 +15,10 @@ accepted = []
 ignore = [
   "Azure Architecture\\s+Center\\s+\\|\\s+Microsoft Learn",
   "GitHub\\s+Flavored\\s+Markdown",
+  # Inline-code citations of US-spelled identifiers: the `mold` linker and the
+  # `color` API named as an example in the documentation style guide.
+  "`color`",
+  "`mold`",
 ]
 
 [files]
