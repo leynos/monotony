@@ -10,6 +10,24 @@ local cache only when the authority is newer, and then applies the narrow
 repository policy in `typos.local.toml`. Edit the local policy and regenerate
 the configuration rather than changing generated entries by hand.
 
+Fenced code blocks are ignored wholesale, but inline backtick spans are not:
+the shared dictionary checks their contents like any other prose. An
+intentionally US-spelled identifier quoted inline therefore needs a narrow
+pattern in the `typos.local.toml` `[patterns] ignore` list, scoped to the exact
+span, for example:
+
+```toml
+[patterns]
+ignore = [
+  "`color`",
+  "`mold`",
+]
+```
+
+Prefer that over a word-level entry in `[words] accepted`, which would also
+excuse the same US spelling in ordinary prose. Move a long or repeatedly quoted
+example into a fenced block instead of broadening the pattern.
+
 When an HTTPS authority is unreachable, the generator may reuse the existing
 tracked `typos.toml`. That connectivity-only fallback deliberately does not
 apply `typos.local.toml`, so local policy edits remain unapplied until a

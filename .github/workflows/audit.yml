@@ -25,7 +25,7 @@ jobs:
       - name: Install cargo-audit
         env:
           RUSTFLAGS: ""
-        run: cargo binstall --no-confirm cargo-audit
+        run: cargo binstall --no-confirm --locked cargo-audit
       - name: Setup Python for audit manifest extraction
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:

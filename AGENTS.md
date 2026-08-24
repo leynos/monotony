@@ -319,9 +319,10 @@ project:
   `typos.local.toml` for narrow repository terminology, then regenerate it with
   `uv run scripts/generate_typos_config.py`; never edit generated entries by
   hand.
-- Quoted APIs and identifiers retain upstream spelling. Put them in backticks
-  or fenced code blocks, which the spelling gate ignores, rather than adding
-  word-level exceptions.
+- Quoted APIs and identifiers retain upstream spelling. Fenced code blocks are
+  ignored wholesale, but inline backticks are not: a US-spelled identifier in a
+  backtick span still needs a narrow pattern in `typos.local.toml` (for
+  example, ``"`mold`"``) rather than a word-level exception.
 - Run `make fmt` after any documentation changes to format all Markdown
   files and fix table markup.
 - Validate Mermaid diagrams in Markdown files by running `make nixie`.

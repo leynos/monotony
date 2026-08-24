@@ -42,10 +42,13 @@ jobs:
         uses: astral-sh/setup-uv@7e7e21ddc30bd66316c7b9889405f485b5022c96
       - name: Spelling
         run: make spelling
+      # --locked is passed through to the cargo-install fallback that binstall
+      # uses when no prebuilt binary is available. nextest refuses to build
+      # without it, failing the job on a compile_error! tripwire.
       - name: Install test runner
         env:
           RUSTFLAGS: ""
-        run: cargo binstall --no-confirm cargo-nextest
+        run: cargo binstall --no-confirm --locked cargo-nextest
       # Dependency audits report advisories against the whole lockfile, so a
       # newly published advisory would fail every Dependabot PR regardless of
       # content and deadlock auto-merge. The scheduled audit workflow covers
@@ -54,7 +57,7 @@ jobs:
         if: github.actor != 'dependabot[bot]'
         env:
           RUSTFLAGS: ""
-        run: cargo binstall --no-confirm cargo-audit
+        run: cargo binstall --no-confirm --locked cargo-audit
       - name: Setup Python for audit manifest extraction
         if: github.actor != 'dependabot[bot]'
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97

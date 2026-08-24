@@ -34,7 +34,8 @@ extend-ignore-re = [
     "Azure Architecture\\s+Center\\s+\\|\\s+Microsoft Learn",
     "GitHub\\s+Flavored\\s+Markdown",
     "\\brust-analyzer\\b",
-    "`[^`\\n]+`",
+    "`color`",
+    "`mold`",
 ]
 
 [default.extend-words]

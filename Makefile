@@ -34,7 +34,8 @@ RUFF_VERSION ?= 0.15.12
 TYPOS_VERSION ?= 1.48.0
 SPELLING_PY_SRCS := scripts/generate_typos_config.py scripts/typos_rollout.py \
 	scripts/typos_rollout_cache.py scripts/typos_rollout_http.py \
-	scripts/tests/test_typos_rollout.py scripts/tests/test_typos_rollout_refresh.py
+	scripts/tests/test_typos_rollout.py scripts/tests/test_typos_rollout_refresh.py \
+	scripts/tests/test_spelling_policy.py
 
 build: target/debug/$(TARGET) ## Build debug binary
 release: target/release/$(TARGET) ## Build release binary
