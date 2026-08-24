@@ -45,7 +45,7 @@ behind `#[cfg(test)]`, so downstream crates can enable them in their own
 
 ```toml
 [dev-dependencies]
-monotony = { version = "0.1.0", features = ["test-util"] }
+monotony = { version = "1.0.0", features = ["test-util"] }
 ```
 
 Use `FixedMonotonicClock::with_elapsed(...)` for code that calls `now()`

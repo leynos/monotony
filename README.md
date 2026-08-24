@@ -31,14 +31,14 @@ ______________________________________________________________________
 
 ```toml
 [dependencies]
-monotony = "0.1.0"
+monotony = "1.0.0"
 ```
 
 Enable deterministic clocks for tests:
 
 ```toml
 [dev-dependencies]
-monotony = { version = "0.1.0", features = ["test-util"] }
+monotony = { version = "1.0.0", features = ["test-util"] }
 ```
 
 ### Basic usage

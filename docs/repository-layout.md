@@ -38,6 +38,7 @@ compact and omits build output such as `target/`.
 │   ├── users_guide_examples.rs
 │   └── trybuild/
 ├── AGENTS.md
+├── CHANGELOG.md
 ├── Cargo.toml
 ├── LICENSE
 ├── Makefile
@@ -88,6 +89,7 @@ compact and omits build output such as `target/`.
   contracts.
 - `AGENTS.md`: Provides repository-specific working instructions for agents and
   contributors.
+- `CHANGELOG.md`: Records notable changes in each published release.
 - `Cargo.toml`: Defines package metadata, dependencies, lint policy, and Cargo
   configuration.
 - `LICENSE`: Records the project licence text.
