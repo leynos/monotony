@@ -27,7 +27,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Setup Rust
-        uses: leynos/shared-actions/.github/actions/setup-rust@197d04cbc6f20cd7d1a08b4e445a5c35910e5364
+        uses: leynos/shared-actions/.github/actions/setup-rust@0e3c4d24e43aa48b511d94f3b902711eb02138df
       - name: Install mold linker
         if: runner.os == 'Linux'
         run: |
@@ -37,7 +37,7 @@ jobs:
           sudo apt-get update \
             && sudo apt-get install --yes --no-install-recommends clang lld mold
       - name: Test and Measure Coverage
-        uses: leynos/shared-actions/.github/actions/generate-coverage@197d04cbc6f20cd7d1a08b4e445a5c35910e5364
+        uses: leynos/shared-actions/.github/actions/generate-coverage@0e3c4d24e43aa48b511d94f3b902711eb02138df
         env:
           CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER: clang
           RUSTFLAGS: -C link-arg=-fuse-ld=lld
@@ -54,7 +54,7 @@ jobs:
         env:
           CS_ACCESS_TOKEN: ${{ secrets.CS_ACCESS_TOKEN }}
         if: ${{ env.CS_ACCESS_TOKEN }}
-        uses: leynos/shared-actions/.github/actions/upload-codescene-coverage@197d04cbc6f20cd7d1a08b4e445a5c35910e5364
+        uses: leynos/shared-actions/.github/actions/upload-codescene-coverage@0e3c4d24e43aa48b511d94f3b902711eb02138df
         with:
           format: lcov
           access-token: ${{ env.CS_ACCESS_TOKEN }}
