@@ -1,5 +1,5 @@
 # Generated from the shared en-GB-oxendict dictionary.
-# Regenerate with scripts/generate_typos_config.py; do not edit by hand.
+# Regenerate with typos-config-builder; do not edit by hand.
 
 [files]
 extend-exclude = [
@@ -32,7 +32,9 @@ locale = "en-gb"
 extend-ignore-re = [
     "(?s)```.*?```",
     "Azure Architecture\\s+Center\\s+\\|\\s+Microsoft Learn",
+    "Azure\\s+Architecture\\s+Center\\s*\\|\\s*Microsoft\\s+Learn\\b",
     "GitHub\\s+Flavored\\s+Markdown",
+    "GitHub\\s+Flavored\\s+Markdown\\b(?:\\s\\(GFM\\))?",
     "\\brust-analyzer\\b",
     "`color`",
     "`mold`",
