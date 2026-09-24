@@ -20,6 +20,7 @@ compact and omits build output such as `target/`.
 │       ├── ci.yml
 
 ├── docs/
+│   ├── adr-001-main-owned-coverage-publication.md
 │   ├── contents.md
 │   ├── clock-design.md
 │   ├── developers-guide.md
@@ -62,6 +63,8 @@ compact and omits build output such as `target/`.
   design material.
 - `docs/contents.md`: Indexes the documentation set and should be updated when
   documentation files are added, renamed, or removed.
+- `docs/adr-001-main-owned-coverage-publication.md`: Records the decision that
+  `main` owns coverage publication and the ratchet baseline.
 - `docs/clock-design.md`: Records the architectural rationale for the clock
   abstraction and `test-util` feature boundary.
 - `docs/execplans/`: Holds living execution plans for substantial repository

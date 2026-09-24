@@ -13,6 +13,9 @@ set.
   top-level files, directories, and ownership boundaries.
 - [Clock design](clock-design.md) explains the clock abstraction and
   `test-util` feature boundary.
+- [ADR 001: main-owned coverage publication](adr-001-main-owned-coverage-publication.md)
+  records why `main` owns the CodeScene upload and the coverage baseline, and
+  what the publisher and its contract tests must hold.
 - [Documentation style guide](documentation-style-guide.md) defines the
   spelling, structure, Markdown, Architecture Decision Record (ADR), Request
   for Comments (RFC), and roadmap conventions used by this documentation set.

@@ -20,8 +20,14 @@ features = ["test-util"]
 [dependencies]
 
 [dev-dependencies]
+anyhow = "1.0.100"
+camino = "1.2.2"
+cap-std = { version = "3.4.5", features = ["fs_utf8"] }
 proptest = { version = "1.11.0", default-features = false, features = ["std"] }
 rstest = "0.26.1"
+# The CV-005 workflow contract parses workflows structurally, and serde_yaml
+# refuses a mapping that repeats a key.
+serde_yaml = "0.9.34"
 trybuild = "1.0.117"
 
 [lints.clippy]
