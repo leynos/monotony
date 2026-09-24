@@ -16,7 +16,6 @@ compact and omits build output such as `target/`.
 ├── .github/
 │   ├── dependabot.yml
 │   └── workflows/
-│       ├── act-validation.yml
 │       ├── ci.yml
 
 ├── docs/
@@ -37,6 +36,8 @@ compact and omits build output such as `target/`.
 │   ├── clock.rs
 │   ├── compile_time.rs
 │   ├── users_guide_examples.rs
+│   ├── workflow_suite_contract.rs
+│   ├── workflow_suite/
 │   └── trybuild/
 ├── AGENTS.md
 ├── CHANGELOG.md
@@ -54,8 +55,6 @@ compact and omits build output such as `target/`.
 - `.cargo/config.toml`: Configures Cargo defaults for local development,
   including Linux linker and code-generation settings.
 - `.github/dependabot.yml`: Configures automated dependency update checks.
-- `.github/workflows/act-validation.yml`: Runs the generated workflow
-  validation through `act` separately from main CI.
 - `.github/workflows/ci.yml`: Runs the generated project's continuous
   integration checks.
 
@@ -88,6 +87,11 @@ compact and omits build output such as `target/`.
 - `tests/compile_time.rs`: Runs `trybuild` compile-time API contract tests.
 - `tests/users_guide_examples.rs`: Exercises code examples from the users'
   guide.
+- `tests/workflow_suite_contract.rs`: Holds the contract that each pull
+  request runs the test suite once, in the coverage step, with the doctests in
+  a step of their own.
+- `tests/workflow_suite/`: Contains the workflow and manifest readers that
+  contract uses.
 - `tests/trybuild/`: Contains downstream crate fixtures for compile-time API
   contracts.
 - `AGENTS.md`: Provides repository-specific working instructions for agents and
