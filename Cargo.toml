@@ -28,6 +28,8 @@ rstest = "0.27.0"
 # The CV-005 workflow contract parses workflows structurally, and serde_yaml
 # refuses a mapping that repeats a key.
 serde_yaml = "0.9.34"
+# The suite-once workflow contract reads the declared features from Cargo.toml.
+toml = "1.1.2"
 trybuild = "1.0.117"
 
 [lints.clippy]

@@ -56,8 +56,7 @@ mod text;
 /// The closure is computed from the directory, so a new workflow is covered
 /// the day it lands. This names the floor it must still reach: a closure that
 /// silently emptied would make the first clause pass having read nothing.
-const KNOWN_PULL_REQUEST_WORKFLOWS: [&str; 3] =
-    ["act-validation.yml", "ci.yml", "dependabot-automerge.yml"];
+const KNOWN_PULL_REQUEST_WORKFLOWS: [&str; 2] = ["ci.yml", "dependabot-automerge.yml"];
 
 /// The workflow that publishes coverage from `main`.
 const PUBLISHER: &str = "coverage-main.yml";
