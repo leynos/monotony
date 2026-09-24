@@ -54,7 +54,9 @@ container-backed checks in parallel.
 ## Coverage publication
 
 Main owns both persistent coverage outputs, following concordat's CV-005 rule.
-Pull requests measure coverage in `ci.yml` with `with-ratchet: 'true'` and
+[ADR 001](adr-001-main-owned-coverage-publication.md) records the decision and
+its rationale; this section is the operational summary. Pull requests measure
+coverage in `ci.yml` with `with-ratchet: 'true'` and
 `publish-artefact: 'false'`, so they check the ratchet against the stored
 baseline and do nothing else: no pull request uploads a report, runs
 `cs-coverage`, receives `CS_ACCESS_TOKEN`, or contacts `codescene.io`.
@@ -76,16 +78,18 @@ only when both hold:
 The upload passes the token only as `access-token`, never through an `env`: the
 upload action is composite and hands its step's `env` to the nested steps it
 runs. The concurrency group is `${{ github.workflow }}-${{ github.ref }}` and
-never cancels, so runs never overlap and, for triggered runs (push and
-dispatch), uploads land in commit order and the newest baseline wins. A manual
-"Re-run jobs" on an older `main` run is an operator action: it keeps its old
-SHA and republishes that commit's coverage and baseline until the next push
-supersedes it. Two gaps are known and accepted. A Dependabot pull request
-merged by the automerge workflow with `GITHUB_TOKEN` fires no push, so it
-publishes nothing until the next push to `main` (shared-actions #518). A
-dispatch that replaces a pending push uploads the same or a newer commit, but
-`generate-coverage` saves the baseline only on a push, so the baseline stays
-one commit behind until the next push (shared-actions #518).
+never cancels, so runs for the same ref never overlap and, for triggered runs
+(push and dispatch), uploads land in commit order and the newest baseline wins.
+Runs on other refs may overlap a `main` run, but the upload's ref conjunct
+keeps them from publishing. A manual "Re-run jobs" on an older `main` run is an
+operator action: it keeps its old SHA and republishes that commit's coverage
+and baseline until the next push supersedes it. Two gaps are known and
+accepted. A Dependabot pull request merged by the automerge workflow with
+`GITHUB_TOKEN` fires no push, so it publishes nothing until the next push to
+`main` (shared-actions #518). A dispatch that replaces a pending push uploads
+the same or a newer commit, but `generate-coverage` saves the baseline only on
+a push, so the baseline stays one commit behind until the next push
+(shared-actions #518).
 
 `tests/coverage_workflows.rs` holds the rule. Its readers and judgements live
 under `tests/cv005/`, and it proves each clause against breaching fixtures as
