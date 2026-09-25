@@ -93,6 +93,12 @@ fn suite_runs(found: &[(String, String)]) -> Vec<(&str, &str, &str)> {
 #[case::run_argument("cargo run -- test", false)]
 #[case::echo("echo cargo test", false)]
 #[case::step_item("- run: cargo test --all-features", true)]
+#[case::env_wrapper("env RUSTFLAGS=x cargo test", true)]
+#[case::timeout_wrapper("timeout 30m make test", true)]
+#[case::bash_script("bash -c \"cargo test\"", true)]
+#[case::sh_script("sh -c 'make test'", true)]
+#[case::compound("if true; then cargo test; fi", true)]
+#[case::shell_file("bash scripts/check.sh", false)]
 fn suite_spellings_are_recognized(#[case] line: &str, #[case] expected: bool) {
     assert_eq!(
         Command::from_line(line).runs_suite(),

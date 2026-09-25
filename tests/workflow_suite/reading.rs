@@ -38,6 +38,25 @@ const SUITE_SUBCOMMANDS: [&str; 3] = ["test", "nextest", "llvm-cov"];
 /// `make` runs the default goal, which is `all`, so it counts as well.
 const SUITE_TARGETS: [&str; 5] = ["test", "all", "coverage", "dev-test", "test-fast"];
 
+/// Wrappers that run a command after their own options, each with the
+/// options that take a value and the operands read before the command.
+const WRAPPERS: [(&str, &[&str], usize); 6] = [
+    ("env", &["-u", "--unset", "-C", "--chdir"], 0),
+    ("timeout", &["-s", "--signal", "-k", "--kill-after"], 1),
+    ("nice", &["-n", "--adjustment"], 0),
+    ("command", &[], 0),
+    ("exec", &["-a"], 0),
+    ("time", &[], 0),
+];
+
+/// Reserved words that open or continue a compound command, which follows.
+const CONTROL_WORDS: [&str; 9] = [
+    "if", "then", "else", "elif", "do", "while", "until", "!", "{",
+];
+
+/// Shells whose `-c` operand is itself a command.
+const SHELLS: [&str; 2] = ["sh", "bash"];
+
 /// Opens the crate manifest directory as a capability-scoped handle.
 pub(crate) fn manifest_dir() -> std::io::Result<Dir> {
     Dir::open_ambient_dir(env!("CARGO_MANIFEST_DIR"), ambient_authority())
@@ -108,11 +127,38 @@ impl<'a> Command<'a> {
 impl Segment<'_> {
     /// Returns the program the segment runs and its arguments, skipping
     /// leading variable assignments.
+    ///
+    /// Wrappers, reserved words and `sh -c` are looked through, so the
+    /// program returned is the one that finally runs.
     fn invocation(&self) -> Option<(&str, &[&str])> {
-        let start = self.0.iter().position(|word| !word.contains('='))?;
-        let (program, arguments) = self.0.get(start..)?.split_first()?;
-        let name = program.rsplit('/').next().unwrap_or(program);
-        Some((name, arguments))
+        let mut words = self.0.as_slice();
+        loop {
+            let start = words.iter().position(|word| !word.contains('='))?;
+            let (program, arguments) = words.get(start..)?.split_first()?;
+            let name = program.rsplit('/').next().unwrap_or(program);
+            match Self::wrapped(name, arguments) {
+                Some(inner) => words = inner,
+                None => return Some((name, arguments)),
+            }
+        }
+    }
+
+    /// Returns the command a wrapper runs, or `None` if `name` wraps nothing.
+    fn wrapped<'s, 'w>(name: &str, arguments: &'s [&'w str]) -> Option<&'s [&'w str]> {
+        if CONTROL_WORDS.contains(&name) {
+            return Some(arguments);
+        }
+        if SHELLS.contains(&name) {
+            let script = arguments.iter().position(|word| *word == "-c")?;
+            return arguments.get(script.checked_add(1)?..);
+        }
+        let (_, value_options, leading) = WRAPPERS.iter().find(|(wrapper, ..)| *wrapper == name)?;
+        let mut index = 0_usize;
+        while let Some(option) = arguments.get(index).filter(|word| word.starts_with('-')) {
+            let width = if value_options.contains(option) { 2 } else { 1 };
+            index = index.checked_add(width)?;
+        }
+        arguments.get(index.checked_add(*leading)?..)
     }
 
     /// Returns `true` if the segment runs the suite.
