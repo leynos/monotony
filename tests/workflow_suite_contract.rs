@@ -31,6 +31,10 @@ use reading::{Command, Job, Manifest, Workflow, manifest_dir, workflows};
 /// The one suite command a workflow may run outside the coverage step.
 const DOCTEST_COMMAND: &str = "cargo test --doc --workspace --all-features";
 
+/// The flags `make test` gives its doctest line, which the doctest step
+/// must carry so it checks what `make test` checks.
+const DOCTEST_FLAGS: &str = "RUSTFLAGS: -D warnings";
+
 /// The coverage action every pull request's suite run goes through.
 const COVERAGE_ACTION: &str = "leynos/shared-actions/.github/actions/generate-coverage@";
 
@@ -150,6 +154,10 @@ fn build_test_runs_the_doctests_unconditionally() {
         !steps.iter().any(reading::Step::is_conditional),
         "the doctest step must always run"
     );
+    assert!(
+        steps.iter().all(|step| step.has_line(DOCTEST_FLAGS)),
+        "the doctest step must carry `{DOCTEST_FLAGS}`"
+    );
 }
 
 #[test]
@@ -251,4 +259,56 @@ fn both_coverage_steps_pass_the_features() {
             "{workflow}'s coverage step must pass `{expected}`"
         );
     }
+}
+
+/// Commands that run the suite, for the bounded composition tests.
+const SUITE_RUNS: [&str; 4] = ["make test", "make", "cargo test", "cargo nextest run"];
+
+/// Commands that run nothing of the suite, for the same tests.
+const HARMLESS: [&str; 3] = ["make lint", "echo ok", "cargo build"];
+
+/// Every way one command can follow another on a `run:` body.
+const JOINERS: [&str; 6] = [";", " ; ", "&&", " || ", " | ", "\n"];
+
+/// Every prefix the reader must look through to the command behind it.
+const PREFIXES: [&str; 6] = ["", "X=1 ", "env X=1 ", "timeout 5m ", "then ", "do "];
+
+/// Returns each harmless command joined to each command behind each prefix.
+fn compositions(commands: &[&str]) -> Vec<String> {
+    HARMLESS
+        .iter()
+        .flat_map(|first| {
+            JOINERS.iter().flat_map(move |joiner| {
+                PREFIXES.iter().flat_map(move |prefix| {
+                    commands
+                        .iter()
+                        .map(move |command| format!("{first}{joiner}{prefix}{command}"))
+                })
+            })
+        })
+        .collect()
+}
+
+/// Every suite run is found after any joiner and behind any prefix; the
+/// inputs are enumerated exhaustively rather than sampled.
+#[test]
+fn a_suite_run_is_found_wherever_it_is_joined() {
+    let missed: Vec<String> = compositions(&SUITE_RUNS)
+        .into_iter()
+        .filter(|line| !Command::from_line(line).runs_suite())
+        .collect();
+    assert!(missed.is_empty(), "suite runs missed: {missed:?}");
+}
+
+/// No harmless command reads as a suite run, however it is joined.
+#[test]
+fn nothing_is_found_in_harmless_commands() {
+    let found: Vec<String> = compositions(&HARMLESS)
+        .into_iter()
+        .filter(|line| Command::from_line(line).runs_suite())
+        .collect();
+    assert!(
+        found.is_empty(),
+        "harmless commands read as suite runs: {found:?}"
+    );
 }
