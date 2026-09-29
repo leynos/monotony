@@ -44,6 +44,8 @@ jobs:
           globs: '**/*.md'
       - name: Setup uv
         uses: astral-sh/setup-uv@f5548c55522a1db0af3c84f2af3d058bc9bc2de2
+      - name: Check the CV-005 contracts
+        run: make test-workflow-contracts
       - name: Spelling
         run: make spelling
       # --locked is passed through to the cargo-install fallback that binstall
@@ -119,7 +121,7 @@ jobs:
           # The pull request measures coverage for its own ratchet check and
           # nothing else: it neither publishes the report nor contacts
           # CodeScene. Main owns both, in coverage-main.yml, and
-          # tests/coverage_workflows.rs holds the split.
+          # `make test-workflow-contracts` holds the split.
           with-ratchet: 'true'
           publish-artefact: 'false'
       # The doctests are the only part of `make test` the coverage step does
