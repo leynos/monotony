@@ -19,6 +19,8 @@ ignore = [
   # `color` API named as an example in the documentation style guide.
   "`color`",
   "`mold`",
+  # The mold linker flag the build standard section spells out.
+  "-fuse-ld=mold",
 ]
 
 [files]
