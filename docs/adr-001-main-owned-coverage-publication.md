@@ -84,13 +84,14 @@ following shape:
   newer trigger replaces any pending run. Keying the group on the event as well
   would let a dispatch and a push on `main` run side by side.
 
-`tests/coverage_workflows.rs`, with its readers and judgements under
-`tests/cv005/`, owns the rule. It checks the real workflows and proves each
-clause against breaching fixtures. The pull-request clauses cover every
-workflow a pull request can reach through local `uses:` calls. The host and
-token clauses read every scalar in each document. The upload condition is split
-on `&&` with any `||` refused, and workflows are parsed with duplicate keys
-refused. The developers' guide keeps the operational summary.
+`make test-workflow-contracts` owns the rule by running the shared
+`cv005-contracts` library from shared-actions against the real workflows. The
+pull-request clauses cover every workflow a pull request can reach through local
+`uses:` calls. The host and token clauses read every scalar in each document.
+The upload condition is split on `&&` with any `||` refused, and workflows are
+read strictly, with duplicate keys refused. The library's own suite proves each
+clause against breaching fixtures. The developers' guide keeps the operational
+summary.
 
 ## Goals and non-goals
 

@@ -7,7 +7,7 @@ name: Coverage (main)
 # pull request head is not, and its check mode fails on every project whose
 # coverage gates are off. Caches written on main are readable by every
 # pull-request run, so the baseline written here is the one those ratchet
-# checks compare against. tests/coverage_workflows.rs holds this shape.
+# checks compare against. `make test-workflow-contracts` holds this shape.
 #
 # Known exception: a Dependabot pull request merged by the automerge workflow
 # with GITHUB_TOKEN fires no push event, so that merge publishes nothing until
