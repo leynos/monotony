@@ -21,6 +21,8 @@ ignore = [
   "`mold`",
   # The mold linker flag the build standard section spells out.
   "-fuse-ld=mold",
+  # The setup-rust input the build standard section names.
+  "`install-mold`",
 ]
 
 [files]
