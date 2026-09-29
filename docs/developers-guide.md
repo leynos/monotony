@@ -101,7 +101,8 @@ a push, so the baseline stays one commit behind until the next push
 `cv005-contracts check`, the shared contract library in `leynos/shared-actions`
 (`packages/cv005-contracts`), from a full commit named by `CV005_CONTRACTS_REF`
 in the Makefile, and CI runs it in a "Check the CV-005 contracts" step. A fix
-to the rules is therefore a pin bump. The repository's only parameter is
+to the rules is therefore a pin bump. The target needs `uv`, which fetches the
+Python 3.13 the library runs under. The repository's only parameter is
 `repository` in `.github/cv005.toml`. The library's own suite proves each rule
 refuses the shape it exists to refuse, so this repository keeps no copy of the
 readers or the refusal cases. The pull-request clauses run over every workflow
@@ -142,8 +143,8 @@ Development builds use Cranelift for debug code generation. On Linux targets,
 generation uses `lld` because LLVM coverage tooling expects LLVM-compatible
 linker behaviour.
 
-Install `clang`, `lld`, `mold`, `python3`, and `cargo-audit` before running the
-full generated workflow locally on Linux.
+Install `clang`, `lld`, `mold`, `python3`, `uv`, and `cargo-audit` before
+running the full generated workflow locally on Linux.
 
 ### Security audit ignores
 

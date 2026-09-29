@@ -84,14 +84,13 @@ following shape:
   newer trigger replaces any pending run. Keying the group on the event as well
   would let a dispatch and a push on `main` run side by side.
 
-`make test-workflow-contracts` owns the rule by running the shared
-`cv005-contracts` library from shared-actions against the real workflows. The
-pull-request clauses cover every workflow a pull request can reach through local
-`uses:` calls. The host and token clauses read every scalar in each document.
-The upload condition is split on `&&` with any `||` refused, and workflows are
-read strictly, with duplicate keys refused. The library's own suite proves each
-clause against breaching fixtures. The developers' guide keeps the operational
-summary.
+`tests/coverage_workflows.rs`, with its readers and judgements under
+`tests/cv005/`, owns the rule. It checks the real workflows and proves each
+clause against breaching fixtures. The pull-request clauses cover every
+workflow a pull request can reach through local `uses:` calls. The host and
+token clauses read every scalar in each document. The upload condition is split
+on `&&` with any `||` refused, and workflows are parsed with duplicate keys
+refused. The developers' guide keeps the operational summary.
 
 ## Goals and non-goals
 
@@ -112,3 +111,13 @@ summary.
 - A manual "Re-run jobs" on an older `main` run keeps its old SHA and
   republishes that commit's coverage and baseline until the next push
   supersedes it. This is an operator action, not a race.
+
+## Addendum, 2026-09-29: the contract moved to a shared library
+
+The contract that enforces this decision no longer lives in this repository.
+`make test-workflow-contracts` runs `cv005-contracts check`, the shared
+contract library in `leynos/shared-actions` (`packages/cv005-contracts`), from
+a full commit pinned in the Makefile, and `.github/cv005.toml` holds this
+repository's parameters. The clauses are unchanged, and the library's own suite
+proves each one. The paragraphs above name the repository-local copy this
+replaces.
