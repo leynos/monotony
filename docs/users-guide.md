@@ -243,10 +243,9 @@ Monotony uses Rust 2024, a pinned nightly toolchain, strict lint settings, and
 documented library code.
 
 Development builds use Cranelift for debug code generation. On Linux targets,
-`.cargo/config.toml` configures clang with the repository's LLD baseline. Use
-`make test-fast` to opt into `mold` for faster local test linking. Coverage
-generation uses `lld` because LLVM coverage tools expect LLVM-compatible linker
-behaviour.
+`.cargo/config.toml` configures clang to link with `mold`, so install `mold`
+before building. Coverage generation uses `lld` because LLVM coverage tools
+expect LLVM-compatible linker behaviour.
 
 ## Makefile Targets
 
@@ -257,7 +256,8 @@ The generated `Makefile` exposes these public targets:
 - `make lint` runs rustdoc, Clippy, and Whitaker with warnings denied.
 - `make test` runs `cargo nextest run` when cargo-nextest is installed and
   falls back to `cargo test` otherwise. All projects also run doctests.
-- `make test-fast` runs the same tests with the opt-in `mold` linker route.
+- `make test-fast` is an alias for `make test`, which links with `mold` by
+  default on Linux.
 - `make build` builds the debug target.
 - `make release` builds the release target.
 - `make coverage` writes `lcov.info` using `cargo llvm-cov` and `lld`.

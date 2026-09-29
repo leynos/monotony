@@ -39,8 +39,8 @@ repository boundaries live in [repository layout](repository-layout.md).
 Use `make all` as the public entrypoint for formatting, linting, and tests.
 `make lint` runs rustdoc, Clippy, and Whitaker. `make test` prefers
 `cargo nextest run` and falls back to `cargo test` when cargo-nextest is not
-available. Use `make test-fast` to run the same test entrypoint with the opt-in
-`mold` linker route for local test builds. Compile-time API contracts live under
+available. `make test-fast` is an alias for `make test`, which links with
+`mold` by default on Linux. Compile-time API contracts live under
 `tests/trybuild/` and run through the same test entrypoint with `trybuild`.
 `make audit` derives the Rust workspace root with `cargo metadata`, logs
 workspace member manifests, and runs `cargo audit` once from the workspace root.
@@ -131,10 +131,9 @@ the shared manual clock only to observe and advance monotonic time.
 ## Tooling
 
 Development builds use Cranelift for debug code generation. On Linux targets,
-`.cargo/config.toml` configures clang with the repository's LLD baseline.
-`make test-fast` opts into `mold` for faster local test linking. Coverage
-generation uses `lld` because LLVM coverage tooling expects LLVM-compatible
-linker behaviour.
+`.cargo/config.toml` configures clang to link with `mold`. `make test-fast` is
+an alias for `make test`. Coverage generation uses `lld` because LLVM coverage
+tooling expects LLVM-compatible linker behaviour.
 
 Install `clang`, `lld`, `mold`, `python3`, and `cargo-audit` before running the
 full generated workflow locally on Linux.
