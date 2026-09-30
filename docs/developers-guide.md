@@ -97,13 +97,20 @@ the same or a newer commit, but `generate-coverage` saves the baseline only on
 a push, so the baseline stays one commit behind until the next push
 (shared-actions #518).
 
-`tests/coverage_workflows.rs` holds the rule. Its readers and judgements live
-under `tests/cv005/`, and it proves each clause against breaching fixtures as
-well as against the real workflows: the pull-request clauses run over every
-workflow a pull request can reach through local `uses:` calls, the host and
-token clauses read every scalar in each document, the upload condition is split
-on `&&` with any `||` refused, and workflows are parsed with duplicate keys
-refused.
+`make test-workflow-contracts` holds the rule by running
+`cv005-contracts check`, the shared contract library in `leynos/shared-actions`
+(`packages/cv005-contracts`), from a full commit named by `CV005_CONTRACTS_REF`
+in the Makefile, and CI runs it in a "Check the CV-005 contracts" step. A fix
+to the rules is therefore a pin bump. The target needs `uv`, which fetches the
+Python 3.13 the library runs under. The repository's only parameter is
+`repository` in `.github/cv005.toml`. The library's own suite proves each rule
+refuses the shape it exists to refuse, so this repository keeps no copy of the
+readers or the refusal cases. The pull-request clauses run over every workflow
+a pull request can reach through local `uses:` calls, the host and token
+clauses read every scalar in each document, the upload condition is split on
+`&&` with any `||` refused, and workflows are read strictly: a duplicate key is
+refused rather than silently resolved, and a reading failure exits 2 rather
+than passing.
 
 ## Clock extension boundary
 
@@ -135,8 +142,8 @@ Development builds use Cranelift for debug code generation. On Linux targets,
 an alias for `make test`. Coverage generation uses `lld` because LLVM coverage
 tooling expects LLVM-compatible linker behaviour.
 
-Install `clang`, `lld`, `mold`, `python3`, and `cargo-audit` before running the
-full generated workflow locally on Linux.
+Install `clang`, `lld`, `mold`, `python3`, `uv`, and `cargo-audit` before
+running the full generated workflow locally on Linux.
 
 ### Security audit ignores
 

@@ -1,5 +1,5 @@
 .PHONY: help all clean test test-fast build release coverage lint fmt check-fmt \
-	markdownlint nixie audit rust-audit spelling
+	markdownlint nixie audit rust-audit spelling test-workflow-contracts
 
 SHELL := bash
 
@@ -33,11 +33,22 @@ NIXIE ?= nixie
 WHITAKER ?= $(or $(shell command -v whitaker 2>/dev/null),$(wildcard $(USER_WHITAKER)),whitaker)
 UV ?= uv
 UV_ENV = UV_CACHE_DIR=.uv-cache UV_TOOL_DIR=.uv-tools
+
+# The CV-005 CodeScene contracts live in shared-actions and run from a full
+# commit, so a fix is a pin bump. `.github/cv005.toml` holds this repository's
+# only parameters.
+CV005_CONTRACTS_REF ?= a38feb9be25755c30eca5bda96bd3786a5b89c6b
+CV005_CONTRACTS = $(UV_ENV) $(UV) tool run --python 3.13 \
+	--from 'git+https://github.com/leynos/shared-actions@$(CV005_CONTRACTS_REF)\#subdirectory=packages/cv005-contracts' \
+	cv005-contracts
+
 TYPOS_CONFIG_BUILDER_VERSION ?= v0.1.1
 TYPOS_CONFIG_BUILDER = $(UV_ENV) $(UV) tool run --from \
 	"git+https://github.com/leynos/typos-config-builder.git@$(TYPOS_CONFIG_BUILDER_VERSION)" \
 	typos-config-builder
 
+test-workflow-contracts: ## Check the CV-005 CodeScene workflow contracts
+	$(CV005_CONTRACTS) check --repository .
 # The development build standard (concordat rule `rust-build-defaults`):
 # the parallel rustc frontend and, on Linux, the mold linker. An assigned
 # RUSTFLAGS replaces every `rustflags` table in .cargo/config.toml, so each
@@ -50,7 +61,7 @@ STANDARD_RUSTFLAGS := -Zthreads=8$(if $(filter Linux,$(BUILD_HOST_OS)), -Clink-a
 build: target/debug/$(TARGET) ## Build debug binary
 release: target/release/$(TARGET) ## Build release binary
 
-all: check-fmt lint test spelling ## Perform a comprehensive check of code and prose
+all: check-fmt lint test spelling test-workflow-contracts ## Perform a comprehensive check of code and prose
 
 clean: ## Remove build artifacts
 	$(CARGO) clean

@@ -111,3 +111,13 @@ refused. The developers' guide keeps the operational summary.
 - A manual "Re-run jobs" on an older `main` run keeps its old SHA and
   republishes that commit's coverage and baseline until the next push
   supersedes it. This is an operator action, not a race.
+
+## Addendum, 2026-09-29: the contract moved to a shared library
+
+The contract that enforces this decision no longer lives in this repository.
+`make test-workflow-contracts` runs `cv005-contracts check`, the shared
+contract library in `leynos/shared-actions` (`packages/cv005-contracts`), from
+a full commit pinned in the Makefile, and `.github/cv005.toml` holds this
+repository's parameters. The clauses are unchanged, and the library's own suite
+proves each one. The paragraphs above name the repository-local copy this
+replaces.
