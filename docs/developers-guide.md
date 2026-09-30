@@ -12,6 +12,10 @@ shared dictionary needs no change here. Because the dictionary is live,
 policy rather than changing generated entries by hand; any such edit is
 overwritten on the next run.
 
+`TYPOS_CONFIG_BUILDER_VERSION` in the `Makefile` pins the
+`typos-config-builder` release the gate runs (currently `v0.1.3`). Raise it
+together with the regenerated `typos.toml`, never on its own.
+
 Fenced code blocks are ignored wholesale, but inline backtick spans are not:
 the shared dictionary checks their contents like any other prose. An
 intentionally US-spelled identifier quoted inline therefore needs a narrow
