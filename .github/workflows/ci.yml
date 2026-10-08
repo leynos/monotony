@@ -13,14 +13,13 @@ jobs:
     env:
       CARGO_TERM_COLOR: always
       BUILD_PROFILE: debug
-      WHITAKER_INSTALLER_VERSION: '0.2.6'
     steps:
       - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
         with:
           persist-credentials: false
           fetch-depth: 0
       - name: Setup Rust
-        uses: leynos/shared-actions/.github/actions/setup-rust@6cec89bac47a21cf756d68d638a9a510998e57f8
+        uses: leynos/shared-actions/.github/actions/setup-rust@7d751eded578e48dacf43ab173d5820e6437c474
         with:
           install-mold: 'true'
           expect-cache: any
@@ -36,7 +35,7 @@ jobs:
       - name: Install mdtablefix
         # `make check-fmt` runs `mdtablefix --check --git`; 0.6.0 is the
         # first release with `--check` and `--git`.
-        uses: leynos/shared-actions/.github/actions/install-mdtablefix@759da19f0379b6d2d7ddef93b7ad4c3b98154e41
+        uses: leynos/shared-actions/.github/actions/install-mdtablefix@7d751eded578e48dacf43ab173d5820e6437c474
         with:
           version: "0.6.0"
 
@@ -47,7 +46,7 @@ jobs:
         with:
           globs: '**/*.md'
       - name: Setup uv
-        uses: astral-sh/setup-uv@f5548c55522a1db0af3c84f2af3d058bc9bc2de2
+        uses: astral-sh/setup-uv@b06acff4b6a41bdd9cdac56507ead0bd7734e757
       - name: Check the CV-005 contracts
         run: make test-workflow-contracts
       - name: Spelling
@@ -57,6 +56,7 @@ jobs:
       # without it, failing the job on a compile_error! tripwire.
       - name: Install test runner
         env:
+          GITHUB_TOKEN: ${{ github.token }}
           RUSTFLAGS: ""
         run: cargo binstall --no-confirm --locked cargo-nextest
       # Dependency audits report advisories against the whole lockfile, so a
@@ -66,6 +66,7 @@ jobs:
       - name: Install cargo-audit
         if: github.actor != 'dependabot[bot]'
         env:
+          GITHUB_TOKEN: ${{ github.token }}
           RUSTFLAGS: ""
         run: cargo binstall --no-confirm --locked cargo-audit
       - name: Setup Python for audit manifest extraction
@@ -73,31 +74,10 @@ jobs:
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: '3.x'
-      - name: Cache Whitaker installer
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
-        with:
-          path: |
-            ~/.cargo/bin/whitaker-installer
-            ~/.cache/cargo-binstall
-          key: whitaker-installer-${{ runner.os }}-${{ runner.arch }}-${{ env.WHITAKER_INSTALLER_VERSION }}
       - name: Install Whitaker
-        env:
-          RUSTFLAGS: ""
-        run: |
-          set -euo pipefail
-          if ! command -v whitaker-installer >/dev/null 2>&1; then
-            if cargo binstall --version >/dev/null 2>&1; then
-              cargo binstall --no-confirm --locked "whitaker-installer@${WHITAKER_INSTALLER_VERSION}"
-            else
-              echo "cargo-binstall unavailable; building whitaker-installer from crates.io"
-              cargo install --locked whitaker-installer --version "${WHITAKER_INSTALLER_VERSION}"
-            fi
-          fi
-          # --cranelift provisions rustc-codegen-cranelift on Whitaker's pinned
-          # toolchain; this project builds with the Cranelift debug backend.
-
-          whitaker-installer --cranelift
-          echo "Whitaker binary: $(command -v whitaker || true)"
+        uses: leynos/shared-actions/.github/actions/install-whitaker@7d751eded578e48dacf43ab173d5820e6437c474
+        with:
+          cranelift: true
       - name: Audit dependencies
         if: github.actor != 'dependabot[bot]'
         run: make audit
