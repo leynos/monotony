@@ -280,8 +280,8 @@ build) use the parallel `rustc` frontend (`-Zthreads=8`) and, on Linux, the
 `mold` linker. Install `mold` before building on Linux, and `clang`, which
 `.cargo/config.toml` selects as the linker for `x86_64-unknown-linux-gnu`: the
 configuration names it, so a build without it fails at link time (on Debian or
-Ubuntu, `sudo apt-get install mold`). macOS keeps its platform linker, because
-`mold` ships for Linux only.
+Ubuntu, install the `mold` package with `apt-get`). macOS keeps its platform
+linker, because `mold` ships for Linux only.
 
 The flags live in `.cargo/config.toml`, but Cargo applies exactly one
 `rustflags` source and an assigned `RUSTFLAGS` replaces every configuration
