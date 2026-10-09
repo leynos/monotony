@@ -243,10 +243,9 @@ Monotony uses Rust 2024, a pinned nightly toolchain, strict lint settings, and
 documented library code.
 
 Development builds use Cranelift for debug code generation. On Linux targets,
-`.cargo/config.toml` configures clang with the repository's LLD baseline. Use
-`make test-fast` to opt into `mold` for faster local test linking. Coverage
-generation uses `lld` because LLVM coverage tools expect LLVM-compatible linker
-behaviour.
+`.cargo/config.toml` configures clang to link with `mold`, so install `mold`
+before building. Coverage generation uses `lld` because LLVM coverage tools
+expect LLVM-compatible linker behaviour.
 
 ## Makefile Targets
 
@@ -258,7 +257,8 @@ The generated `Makefile` exposes these public targets:
 - `make lint` runs rustdoc, Clippy, and Whitaker with warnings denied.
 - `make test` runs `cargo nextest run` when cargo-nextest is installed and
   falls back to `cargo test` otherwise. All projects also run doctests.
-- `make test-fast` runs the same tests with the opt-in `mold` linker route.
+- `make test-fast` is an alias for `make test`, which links with `mold` by
+  default on Linux.
 - `make build` builds the debug target.
 - `make release` builds the release target.
 - `make coverage` writes `lcov.info` using `cargo llvm-cov` and `lld`.
@@ -272,3 +272,28 @@ The generated `Makefile` exposes these public targets:
 
 Install `clang`, `lld`, `mold`, `python3`, `uv`, and `cargo-audit` before
 running the full generated workflow locally on Linux.
+
+### Build standard
+
+Development builds (`make test`, `make lint`, `make typecheck` and the debug
+build) use the parallel `rustc` frontend (`-Zthreads=8`) and, on Linux, the
+`mold` linker. Install `mold` before building on Linux, and `clang`, which
+`.cargo/config.toml` selects as the linker for `x86_64-unknown-linux-gnu`: the
+configuration names it, so a build without it fails at link time (on Debian or
+Ubuntu, install the `mold` package with `apt-get`). macOS keeps its platform
+linker, because `mold` ships for Linux only.
+
+The flags live in `.cargo/config.toml`, but Cargo applies exactly one
+`rustflags` source and an assigned `RUSTFLAGS` replaces every configuration
+source. The Makefile therefore restates the flags in each recipe and keeps any
+`RUSTFLAGS` already in the environment, appending the standard flags after it.
+Two builds are held out deliberately. The coverage build assigns its own flags,
+because a measurement should not depend on the fast flags. `make release` keeps
+the environment's `RUSTFLAGS` and names neither fast flag, so a shipped
+artefact links with the platform linker. A bare `cargo build --release` takes
+the configuration's flags unless `RUSTFLAGS` is assigned, for example
+`RUSTFLAGS="" cargo build --release`.
+
+Cranelift is the development-profile code generator, selected in
+`.cargo/config.toml`; coverage selects LLVM explicitly because instrumentation
+needs it. See [ADR 002](adr-002-rust-build-standard.md) for the reasoning.

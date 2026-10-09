@@ -55,6 +55,7 @@ jobs:
       - name: Setup Rust
         uses: leynos/shared-actions/.github/actions/setup-rust@7d751eded578e48dacf43ab173d5820e6437c474
         with:
+          install-mold: 'true'
           expect-cache: any
       - name: Install mold linker
         if: runner.os == 'Linux'

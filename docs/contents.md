@@ -9,6 +9,9 @@ set.
   its public build and test commands.
 - [Developer guide](developers-guide.md) explains the local workflow and
   implementation tooling for contributors.
+- [ADR 002: Rust build standard](adr-002-rust-build-standard.md) records why
+  development builds use the fast flags while coverage and release builds stay
+  off them.
 - [Repository layout](repository-layout.md) explains the generated project's
   top-level files, directories, and ownership boundaries.
 - [Clock design](clock-design.md) explains the clock abstraction and

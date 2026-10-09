@@ -33,7 +33,7 @@ const DOCTEST_COMMAND: &str = "cargo test --doc --workspace --all-features";
 
 /// The flags `make test` gives its doctest line, which the doctest step
 /// must carry so it checks what `make test` checks.
-const DOCTEST_FLAGS: &str = "RUSTFLAGS: -D warnings";
+const DOCTEST_FLAGS: &str = "RUSTFLAGS: -D warnings -Zthreads=8 -Clink-arg=-fuse-ld=mold";
 
 /// The coverage action every pull request's suite run goes through.
 const COVERAGE_ACTION: &str = "leynos/shared-actions/.github/actions/generate-coverage@";
