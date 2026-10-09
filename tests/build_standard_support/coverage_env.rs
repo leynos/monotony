@@ -103,15 +103,21 @@ fn coverage_command_problems(commands: &[Command], expected: &[Env], link: LinkA
 ///
 /// Returns the reason when the coverage target is not defined or unreadable.
 pub fn coverage_recipe_problems(runner: MakeRunner) -> Result<Problems, String> {
-    if COVERAGE_ENV.is_empty() && COVERAGE_LINK.0.is_empty() {
+    recorded_recipe_problems(runner, COVERAGE_ENV, COVERAGE_LINK)
+}
+
+/// Returns the complaints about the coverage recipe against a given record, so a test can supply
+/// one.
+fn recorded_recipe_problems(
+    runner: MakeRunner,
+    expected: &[Env],
+    link: LinkArg,
+) -> Result<Problems, String> {
+    if expected.is_empty() && link.0.is_empty() {
         return Ok(Vec::new());
     }
     let commands = make_commands(runner, Target("coverage"), Host::Linux)?;
-    Ok(coverage_command_problems(
-        &commands,
-        COVERAGE_ENV,
-        COVERAGE_LINK,
-    ))
+    Ok(coverage_command_problems(&commands, expected, link))
 }
 
 #[cfg(test)]
@@ -135,23 +141,49 @@ mod tests {
             value: "llvm",
         },
         Env {
+            name: "CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER",
+            value: "clang",
+        },
+        Env {
             name: "CFLAGS",
+            value: "-fuse-ld=lld",
+        },
+        Env {
+            name: "LDFLAGS",
             value: "-fuse-ld=lld",
         },
     ];
     const LINK: LinkArg = LinkArg("-C link-arg=-fuse-ld=lld");
+    const OK: &str = "CARGO_PROFILE_DEV_CODEGEN_BACKEND=llvm \
+                      CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=clang RUSTFLAGS=\"-D warnings \
+                      -C link-arg=-fuse-ld=lld\" CFLAGS=\"-fuse-ld=lld\" LDFLAGS=\"-fuse-ld=lld\" \
+                      cargo llvm-cov --lcov";
 
     fn command(text: &str) -> Command {
         Command {
-            text: text.to_owned(),
+            text: text.split_whitespace().collect::<Vec<_>>().join(" "),
             assignment: Assignment::Unassigned,
         }
     }
 
     fn problems(text: &str) -> usize { coverage_env_problems(&command(text), EXPECTED, LINK).len() }
 
-    const OK: &str = "CARGO_PROFILE_DEV_CODEGEN_BACKEND=llvm RUSTFLAGS=\"-D warnings -C \
-                      link-arg=-fuse-ld=lld\" CFLAGS=\"-fuse-ld=lld\" cargo llvm-cov --lcov";
+    /// Returns the command with one recorded variable's assignment replaced, and removed when
+    /// empty.
+    fn broken(env: &Env, assignment: &str) -> String {
+        command(OK)
+            .text
+            .replace(&format!("{}={}", env.name, quoted(env.value)), assignment)
+    }
+
+    /// Quotes a value as the recipe does when it holds a space or a dash, else leaves it bare.
+    fn quoted(value: &str) -> String {
+        if value.starts_with('-') {
+            format!("\"{value}\"")
+        } else {
+            value.to_owned()
+        }
+    }
 
     #[test]
     fn a_command_that_assigns_everything_recorded_is_accepted() {
@@ -159,15 +191,21 @@ mod tests {
     }
 
     #[test]
-    fn a_lost_or_changed_variable_is_refused() {
-        for lost in [
-            OK.replace("CARGO_PROFILE_DEV_CODEGEN_BACKEND=llvm ", ""),
-            OK.replace("=llvm", "=cranelift"),
-            OK.replace("CFLAGS=\"-fuse-ld=lld\" ", ""),
-            OK.replace("CFLAGS=\"-fuse-ld=lld\"", "CFLAGS=\"-fuse-ld=gold\""),
-        ] {
-            assert_eq!(problems(&lost), 1, "{lost}");
+    fn every_recorded_variable_is_required_with_its_value() {
+        for env in EXPECTED {
+            for text in [broken(env, ""), broken(env, &format!("{}=other", env.name))] {
+                assert_ne!(text, command(OK).text, "{}", env.name);
+                assert_eq!(problems(&text), 1, "{}: {text}", env.name);
+            }
         }
+    }
+
+    #[test]
+    fn a_changed_link_argument_in_rustflags_is_refused() {
+        assert_eq!(
+            problems(&OK.replace("-C link-arg=-fuse-ld=lld", "-C link-arg=-fuse-ld=gold")),
+            1
+        );
     }
 
     #[test]
