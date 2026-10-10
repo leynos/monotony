@@ -197,82 +197,184 @@ fn ci_yml_exists() {
 }
 
 const PIN: &str = "0123456789abcdef0123456789abcdef01234567";
-const BOTH: &str =
-    "        with:\n          install-mold: 'true'\n          install-clang-lld: 'true'\n";
 
-/// Builds a `build-test` job: a pinned setup-rust step, then the extra steps.
-fn job(with_block: &str, extra_steps: &str) -> String {
-    format!(
-        "jobs:\n  build-test:\n    steps:\n      - name: Setup Rust\n        uses: \
-         {SETUP_RUST}{PIN}\n{with_block}{extra_steps}"
-    )
+/// A workflow fixture: the text of a job, built from parts.
+#[derive(Clone, Copy)]
+struct Fixture {
+    /// The `with:` block of the pinned setup-rust step, or the mutation call's.
+    with_block: &'static str,
+    /// Steps appended after the setup-rust step (ignored for a mutation call).
+    extra_steps: &'static str,
+    /// Whether the fixture is a mutation-testing caller rather than a build job.
+    mutation: bool,
 }
 
-/// Asserts the workflow text reports a problem containing `expected`.
-fn assert_reports(text: &str, expected: &str) {
-    let found = problems(text);
-    assert!(
-        found.iter().any(|problem| problem.contains(expected)),
-        "expected a problem naming {expected:?}, got {found:?}"
+impl Fixture {
+    const fn job(with_block: &'static str, extra_steps: &'static str) -> Self {
+        Self {
+            with_block,
+            extra_steps,
+            mutation: false,
+        }
+    }
+
+    const fn call(with_block: &'static str) -> Self {
+        Self {
+            with_block,
+            extra_steps: "",
+            mutation: true,
+        }
+    }
+
+    fn text(&self) -> String {
+        if self.mutation {
+            return format!(
+                "jobs:\n  mutation:\n    uses: {MUTATION_CARGO}{PIN}\n{}",
+                self.with_block
+            );
+        }
+        format!(
+            "jobs:\n  build-test:\n    steps:\n      - name: Setup Rust\n        uses: \
+             {SETUP_RUST}{PIN}\n{}{}",
+            self.with_block, self.extra_steps
+        )
+    }
+
+    fn problems(&self) -> Vec<String> { problems(&self.text()) }
+}
+
+/// What a fixture's problems must name.
+#[derive(Clone, Copy)]
+struct Names(&'static str);
+
+impl Names {
+    fn appear_in(self, fixture: Fixture) {
+        let found = fixture.problems();
+        assert!(
+            found.iter().any(|problem| problem.contains(self.0)),
+            "expected a problem naming {:?}, got {found:?}",
+            self.0
+        );
+    }
+}
+
+const BOTH: Fixture = Fixture::job(
+    "        with:\n          install-mold: 'true'\n          install-clang-lld: 'true'\n",
+    "",
+);
+const COMMENTED: Fixture = Fixture::job(
+    "        with: # install the linkers\n          install-mold: 'true' # dev builds\n          \
+     # a comment\n          install-clang-lld: \"true\"\n",
+    "",
+);
+const FORWARDED: Fixture = Fixture::call(
+    "    with:\n      extra-args: x\n      install-mold: 'true'\n      install-clang-lld: 'true'\n",
+);
+const SECOND_STEP: Fixture =
+    Fixture::job(
+        "        with:\n          install-mold: 'true'\n          install-clang-lld: 'true'\n",
+        "      - name: Second\n        uses: \
+         leynos/shared-actions/.github/actions/setup-rust@\
+         0123456789abcdef0123456789abcdef01234567\n        with:\n          install-mold: 'true'\n",
     );
-}
 
-#[test]
-fn both_inputs_and_no_hand_install_pass() {
-    assert_eq!(problems(&job(BOTH, "")), Vec::<String>::new());
-}
-
-#[test]
-fn comments_flow_styles_and_trailing_comments_read_as_yaml_does() {
-    let with_block = "        with: # install the linkers\n          install-mold: 'true' # dev \
-                      builds\n          # a comment\n          install-clang-lld: \"true\"\n";
-
-    assert_eq!(problems(&job(with_block, "")), Vec::<String>::new());
+#[rstest]
+#[case::clean(BOTH)]
+#[case::comments_and_quotes_read_as_yaml_does(COMMENTED)]
+#[case::mutation_call_forwarding_both(FORWARDED)]
+fn a_correct_fixture_has_no_problems(#[case] fixture: Fixture) {
+    assert_eq!(fixture.problems(), Vec::<String>::new());
 }
 
 #[rstest]
-#[case::no_with_block("", "install-mold")]
-#[case::no_second_input("        with:\n          install-mold: 'true'\n", "install-clang-lld")]
+#[case::no_with_block(Fixture::job("", ""), Names("install-mold"))]
+#[case::no_second_input(
+    Fixture::job("        with:\n          install-mold: 'true'\n", ""),
+    Names("install-clang-lld")
+)]
 #[case::false_value(
-    "        with:\n          install-mold: 'false'\n          install-clang-lld: 'true'\n",
-    "install-mold"
+    Fixture::job(
+        "        with:\n          install-mold: 'false'\n          install-clang-lld: 'true'\n",
+        ""
+    ),
+    Names("install-mold")
 )]
 #[case::boolean_value(
-    "        with:\n          install-mold: true\n          install-clang-lld: 'true'\n",
-    "install-mold"
+    Fixture::job(
+        "        with:\n          install-mold: true\n          install-clang-lld: 'true'\n",
+        ""
+    ),
+    Names("install-mold")
 )]
 #[case::commented_out(
-    "        with:\n          # install-mold: 'true'\n          install-clang-lld: 'true'\n",
-    "install-mold"
+    Fixture::job(
+        "        with:\n          # install-mold: 'true'\n          install-clang-lld: 'true'\n",
+        ""
+    ),
+    Names("install-mold")
 )]
 #[case::under_env(
-    "        env:\n          install-mold: 'true'\n          install-clang-lld: 'true'\n",
-    "install-mold"
+    Fixture::job(
+        "        env:\n          install-mold: 'true'\n          install-clang-lld: 'true'\n",
+        ""
+    ),
+    Names("install-mold")
 )]
 #[case::scalar_lookalike(
-    "        with:\n          install-mold: 'false'\n          note: |\n            install-mold: \
-     'true'\n            install-clang-lld: 'true'\n",
-    "install-mold"
+    Fixture::job(
+        "        with:\n          install-mold: 'false'\n          note: |\n            \
+         install-mold: 'true'\n            install-clang-lld: 'true'\n",
+        ""
+    ),
+    Names("install-mold")
 )]
-fn a_missing_or_wrong_input_is_reported(#[case] with_block: &str, #[case] expected: &str) {
-    assert_reports(&job(with_block, ""), expected);
+#[case::second_step_missing_an_input(SECOND_STEP, Names("step 2 does not set install-clang-lld"))]
+#[case::mutation_missing_input(
+    Fixture::call("    with:\n      install-clang-lld: 'true'\n"),
+    Names("install-mold")
+)]
+#[case::mutation_false_value(
+    Fixture::call("    with:\n      install-mold: 'false'\n      install-clang-lld: 'true'\n"),
+    Names("install-mold")
+)]
+#[case::mutation_setup_commands_left(
+    Fixture::call(
+        "    with:\n      install-mold: 'true'\n      install-clang-lld: 'true'\n      \
+         setup-commands: |\n        true\n"
+    ),
+    Names("setup-commands")
+)]
+fn a_missing_or_wrong_input_is_reported(#[case] fixture: Fixture, #[case] names: Names) {
+    names.appear_in(fixture);
 }
 
-#[test]
-fn every_setup_rust_step_must_set_the_inputs() {
-    let second = format!(
-        "      - name: Second\n        uses: {SETUP_RUST}{PIN}\n        with:\n          \
-         install-mold: 'true'\n"
-    );
+#[rstest]
+#[case::apt_get(Fixture::job(BOTH.with_block, "      - name: Install\n        run: sudo apt-get install --yes clang lld\n"))]
+#[case::apt(Fixture::job(BOTH.with_block, "      - name: Install\n        run: sudo apt install --yes clang lld\n"))]
+#[case::continued(Fixture::job(BOTH.with_block, "      - name: Install\n        run: |\n          sudo apt-get install --yes \\\n            clang lld mold\n"))]
+#[case::after_a_comment_ending_in_a_backslash(Fixture::job(BOTH.with_block, "      - name: Install\n        run: |\n          # note \\\n          sudo apt-get install --yes clang lld mold\n"))]
+#[case::folded_scalar(Fixture::job(BOTH.with_block, "      - name: Install\n        run: >-\n          sudo apt-get install --yes\n          clang lld mold\n"))]
+fn a_hand_rolled_install_is_reported_in_any_spelling(#[case] fixture: Fixture) {
+    Names("hand-rolled install").appear_in(fixture);
+}
 
-    assert_reports(&job(BOTH, &second), "step 2 does not set install-clang-lld");
+#[rstest]
+#[case::other_package(Fixture::job(BOTH.with_block, "      - name: Other\n        run: sudo apt-get install --yes jq\n"))]
+#[case::commented(Fixture::job(BOTH.with_block, "      - name: Other\n        run: '# sudo apt-get install --yes clang lld mold'\n"))]
+#[case::a_build_step_naming_a_linker(Fixture::job(BOTH.with_block, "      - name: Other\n        run: make CC=clang\n"))]
+fn an_unrelated_or_commented_command_is_not_reported(#[case] fixture: Fixture) {
+    assert_eq!(fixture.problems(), Vec::<String>::new());
 }
 
 #[test]
 fn an_unpinned_reference_is_reported() {
     let text = format!("jobs:\n  b:\n    steps:\n      - uses: {SETUP_RUST}main\n");
 
-    assert_reports(&text, "no setup-rust step pinned");
+    assert!(
+        problems(&text)
+            .iter()
+            .any(|problem| problem.contains("no setup-rust step pinned"))
+    );
 }
 
 #[test]
@@ -283,69 +385,9 @@ fn a_decoy_uses_line_inside_a_scalar_is_not_a_step() {
          install-clang-lld: 'true'\n"
     );
 
-    assert_reports(&text, "no setup-rust step pinned");
-}
-
-#[rstest]
-#[case::apt_get("sudo apt-get install --yes clang lld")]
-#[case::apt("sudo apt install --yes clang lld")]
-#[case::continued("sudo apt-get install --yes \\\n  clang lld mold")]
-#[case::after_a_comment_ending_in_a_backslash(
-    "# note \\\nsudo apt-get install --yes clang lld mold"
-)]
-fn a_hand_rolled_install_is_reported_in_any_spelling(#[case] command: &str) {
-    let script = command
-        .lines()
-        .map(|line| ["          ", line, "\n"].concat())
-        .collect::<String>();
-    let by_hand = format!("      - name: Install\n        run: |\n{script}");
-
-    assert_reports(&job(BOTH, &by_hand), "hand-rolled install");
-}
-
-#[test]
-fn a_folded_scalar_install_is_reported() {
-    let by_hand =
-        "      - name: Install\n        run: >-\n          sudo apt-get install --yes\n          \
-         clang lld mold\n";
-
-    assert_reports(&job(BOTH, by_hand), "hand-rolled install");
-}
-
-#[rstest]
-#[case::other_package("sudo apt-get install --yes jq")]
-#[case::commented("# sudo apt-get install --yes clang lld mold")]
-#[case::a_build_step_naming_a_linker("make CC=clang")]
-fn an_unrelated_or_commented_command_is_not_reported(#[case] command: &str) {
-    let step = format!("      - name: Other\n        run: {command}\n");
-
-    assert_eq!(problems(&job(BOTH, &step)), Vec::<String>::new());
-}
-
-/// Builds a mutation-testing caller whose `with:` mapping is `with_block`.
-fn mutation(with_block: &str) -> String {
-    format!("jobs:\n  mutation:\n    uses: {MUTATION_CARGO}{PIN}\n{with_block}")
-}
-
-#[test]
-fn a_mutation_call_forwarding_both_inputs_passes() {
-    let with_block = "    with:\n      extra-args: x\n      install-mold: 'true'\n      \
-                      install-clang-lld: 'true'\n";
-
-    assert_eq!(problems(&mutation(with_block)), Vec::<String>::new());
-}
-
-#[rstest]
-#[case::missing_input("    with:\n      install-clang-lld: 'true'\n", "install-mold")]
-#[case::false_value(
-    "    with:\n      install-mold: 'false'\n      install-clang-lld: 'true'\n",
-    "install-mold"
-)]
-#[case::setup_commands_left(
-    "    with:\n      install-mold: 'true'\n      install-clang-lld: 'true'\n      \
-     setup-commands: |\n        true\n",
-    "setup-commands"
-)]
-fn a_mutation_call_is_checked_too(#[case] with_block: &str, #[case] expected: &str) {
-    assert_reports(&mutation(with_block), expected);
+    assert!(
+        problems(&text)
+            .iter()
+            .any(|problem| problem.contains("no setup-rust step pinned"))
+    );
 }
