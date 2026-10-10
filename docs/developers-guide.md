@@ -191,6 +191,15 @@ recorded in [ADR 002](adr-002-rust-build-standard.md). The contract runs
 `make -n`, so a direct `cargo test` needs GNU make on the `PATH`. It fails when
 `make` is missing instead of skipping, so a missing tool cannot read as a pass.
 
+CI also installs `clang` and `lld` through `setup-rust`'s `install-clang-lld`
+input, which installs both on Linux and fails the job unless `clang` and
+`ld.lld` resolve on `PATH`; the workflows carry no hand-rolled `apt-get` step.
+Both inputs skip with a notice on other platforms and set no linker flag, so
+`.cargo/config.toml` and the coverage step's environment still choose which
+linker runs. `tests/linker_provisioning_contract.rs` reads the parsed
+`setup-rust` step of each CI workflow and asserts both inputs are `'true'` and
+that no step installs a linker by hand.
+
 ### Cranelift
 
 Cranelift is the development-profile codegen backend. The full suite was
