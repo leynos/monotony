@@ -62,6 +62,25 @@ fn pinned_to<'a>(nodes: &[&'a Value], prefix: &str) -> Vec<&'a Value> {
         .collect()
 }
 
+/// Returns a complaint when more nodes name `prefix` than pin it to a full SHA,
+/// so an unpinned reference cannot hide beside a correctly pinned one.
+fn unpinned_references(nodes: &[&Value], prefix: &str, pinned: usize) -> Vec<String> {
+    let named = nodes
+        .iter()
+        .filter_map(|node| node.get("uses").and_then(Value::as_str))
+        .filter(|uses| uses.starts_with(prefix))
+        .count();
+    (named > pinned)
+        .then(|| {
+            format!(
+                "{} setup-rust reference(s) not pinned to a full commit SHA",
+                named - pinned
+            )
+        })
+        .into_iter()
+        .collect()
+}
+
 /// Returns the complaints about one node's `with:` mapping: each linker input
 /// that is not the string `'true'`.
 fn missing_inputs(node: &Value, owner: &str) -> Vec<String> {
@@ -148,11 +167,13 @@ fn problems(text: &str) -> Vec<String> {
     if steps.is_empty() && calls.is_empty() {
         return vec!["no setup-rust step pinned to a full commit SHA".to_owned()];
     }
-    let mut found: Vec<String> = steps
-        .iter()
-        .enumerate()
-        .flat_map(|(n, step)| missing_inputs(step, &format!("setup-rust step {}", n + 1)))
-        .collect();
+    let mut found = unpinned_references(&all, SETUP_RUST, steps.len());
+    found.extend(
+        steps
+            .iter()
+            .enumerate()
+            .flat_map(|(n, step)| missing_inputs(step, &format!("setup-rust step {}", n + 1))),
+    );
     found.extend(calls.into_iter().flat_map(mutation_problems));
     found.extend(
         hand_installs(&all)
@@ -329,6 +350,21 @@ fn a_correct_fixture_has_no_problems(#[case] fixture: Fixture) {
     Names("install-mold")
 )]
 #[case::second_step_missing_an_input(SECOND_STEP, Names("step 2 does not set install-clang-lld"))]
+#[case::unpinned_beside_pinned(
+    Fixture::job(
+        BOTH.with_block,
+        "      - name: Other\n        uses: leynos/shared-actions/.github/actions/setup-rust@main\n"
+    ),
+    Names("not pinned to a full commit SHA")
+)]
+#[case::duplicated_input(
+    Fixture::job(
+        "        with:\n          install-mold: 'true'\n          install-mold: 'true'\n          \
+         install-clang-lld: 'true'\n",
+        ""
+    ),
+    Names("does not parse")
+)]
 #[case::mutation_missing_input(
     Fixture::call("    with:\n      install-clang-lld: 'true'\n"),
     Names("install-mold")
