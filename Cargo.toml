@@ -20,6 +20,7 @@ features = ["test-util"]
 [dependencies]
 
 [dev-dependencies]
+serde_norway = "0.9.42"
 camino = "1.2.2"
 cap-std = { version = "4.0.3", features = ["fs_utf8"] }
 proptest = { version = "1.11.0", default-features = false, features = ["std"] }
