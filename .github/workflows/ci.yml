@@ -19,7 +19,7 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
       - name: Setup Rust
-        uses: leynos/shared-actions/.github/actions/setup-rust@81374b6f183e59f0570ad36217ded90d3240fda6
+        uses: leynos/shared-actions/.github/actions/setup-rust@2aed718022775671809f8c85a2c10547dfb1ae13
         with:
           install-mold: 'true'
           expect-cache: any
@@ -27,7 +27,7 @@ jobs:
       - name: Install mdtablefix
         # `make check-fmt` runs `mdtablefix --check --git`; 0.6.0 is the
         # first release with `--check` and `--git`.
-        uses: leynos/shared-actions/.github/actions/install-mdtablefix@81374b6f183e59f0570ad36217ded90d3240fda6
+        uses: leynos/shared-actions/.github/actions/install-mdtablefix@2aed718022775671809f8c85a2c10547dfb1ae13
         with:
           version: "0.6.1"
 
@@ -67,7 +67,7 @@ jobs:
         with:
           python-version: '3.x'
       - name: Install Whitaker
-        uses: leynos/shared-actions/.github/actions/install-whitaker@81374b6f183e59f0570ad36217ded90d3240fda6
+        uses: leynos/shared-actions/.github/actions/install-whitaker@2aed718022775671809f8c85a2c10547dfb1ae13
         with:
           cranelift: true
       - name: Audit dependencies
@@ -82,7 +82,7 @@ jobs:
           echo "Coverage CFLAGS: -fuse-ld=lld"
           echo "Coverage LDFLAGS: -fuse-ld=lld"
       - name: Test and Measure Coverage
-        uses: leynos/shared-actions/.github/actions/generate-coverage@81374b6f183e59f0570ad36217ded90d3240fda6
+        uses: leynos/shared-actions/.github/actions/generate-coverage@2aed718022775671809f8c85a2c10547dfb1ae13
         env:
           CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER: clang
           RUSTFLAGS: -C link-arg=-fuse-ld=lld
