@@ -10,6 +10,9 @@
 # since instrumentation needs it.
 [unstable]
 codegen-backend = true
+# Dated nightlies from 2026-07-31 take the native Cargo key; raw rustc metadata
+# flags break build scripts and are not used.
+embed-metadata = false
 
 [profile.dev]
 codegen-backend = "cranelift"
