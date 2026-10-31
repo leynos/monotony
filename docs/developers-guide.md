@@ -224,4 +224,7 @@ development build and every rebuild recompiles whole crates. To debug, run with
 `[unstable] embed-metadata = false`, the native Cargo key for nightlies from
 2026-07-31, so Cargo coordinates metadata output itself. No raw rustc metadata
 flags are used, and the pin is not moved to suit the key.
-`tests/footprint_contract.rs` holds all three settings.
+`tests/footprint_contract.rs` asks Cargo itself (`--unit-graph` and
+`config get`, which compile nothing) for the effective profiles and the key, so
+an override in any configuration file Cargo merges is caught as well as the
+manifest's own table.
