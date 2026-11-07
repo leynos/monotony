@@ -58,6 +58,9 @@ jobs:
           install-mold: 'true'
           expect-cache: any
           install-clang-lld: 'true'
+      - name: Fetch dependencies
+        # Tests start their own cargo offline; fetch once so none resolves cold.
+        run: cargo fetch --locked
       - name: Test and Measure Coverage
         uses: leynos/shared-actions/.github/actions/generate-coverage@6ca3d5217016143c5857d23a63eb649ea5fcd538
         env:
