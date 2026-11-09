@@ -19,7 +19,7 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
       - name: Setup Rust
-        uses: leynos/shared-actions/.github/actions/setup-rust@6ca3d5217016143c5857d23a63eb649ea5fcd538
+        uses: leynos/shared-actions/.github/actions/setup-rust@0eabb6bc07148981de5da395e30cd78d83f5c7c2
         with:
           install-mold: 'true'
           expect-cache: any
@@ -27,7 +27,7 @@ jobs:
       - name: Install mdtablefix
         # `make check-fmt` runs `mdtablefix --check --git`; 0.6.0 is the
         # first release with `--check` and `--git`.
-        uses: leynos/shared-actions/.github/actions/install-mdtablefix@6ca3d5217016143c5857d23a63eb649ea5fcd538
+        uses: leynos/shared-actions/.github/actions/install-mdtablefix@0eabb6bc07148981de5da395e30cd78d83f5c7c2
         with:
           version: "0.6.1"
 
@@ -67,7 +67,7 @@ jobs:
         with:
           python-version: '3.x'
       - name: Install Whitaker
-        uses: leynos/shared-actions/.github/actions/install-whitaker@6ca3d5217016143c5857d23a63eb649ea5fcd538
+        uses: leynos/shared-actions/.github/actions/install-whitaker@0eabb6bc07148981de5da395e30cd78d83f5c7c2
         with:
           cranelift: true
       - name: Audit dependencies
@@ -85,7 +85,7 @@ jobs:
         # Tests start their own cargo offline; fetch once so none resolves cold.
         run: cargo fetch --locked
       - name: Test and Measure Coverage
-        uses: leynos/shared-actions/.github/actions/generate-coverage@6ca3d5217016143c5857d23a63eb649ea5fcd538
+        uses: leynos/shared-actions/.github/actions/generate-coverage@0eabb6bc07148981de5da395e30cd78d83f5c7c2
         env:
           CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER: clang
           RUSTFLAGS: -C link-arg=-fuse-ld=lld
