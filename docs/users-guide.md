@@ -296,4 +296,4 @@ the configuration's flags unless `RUSTFLAGS` is assigned, for example
 
 Cranelift is the development-profile code generator, selected in
 `.cargo/config.toml`; coverage selects LLVM explicitly because instrumentation
-needs it. See [ADR 002](adr-002-rust-build-standard.md) for the reasoning.
+needs it. See [ADR 002](adrs/adr-0002-rust-build-standard.md) for the reasoning.
