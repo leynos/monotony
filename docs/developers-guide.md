@@ -84,9 +84,9 @@ second time and was removed. The coverage steps in `ci.yml` and
 ## Coverage publication
 
 Main owns both persistent coverage outputs, following concordat's CV-005 rule.
-[ADR 001](adr-001-main-owned-coverage-publication.md) records the decision and
-its rationale; this section is the operational summary. Pull requests measure
-coverage in `ci.yml` with `with-ratchet: 'true'` and
+[ADR 001](adrs/adr-0001-main-owned-coverage-publication.md) records the
+decision and its rationale; this section is the operational summary. Pull
+requests measure coverage in `ci.yml` with `with-ratchet: 'true'` and
 `publish-artefact: 'false'`, so they check the ratchet against the stored
 baseline and do nothing else: no pull request uploads a report, runs
 `cs-coverage`, receives `CS_ACCESS_TOKEN`, or contacts `codescene.io`.
@@ -205,7 +205,7 @@ development target on a Linux host and a macOS host (each keeping the caller's
 own `RUSTFLAGS`) and for each coverage and release target on a Linux host, and
 the `setup-rust` steps of the CI workflows (each must pass `install-mold`), so
 a flag lost through a recipe or workflow edit fails there. The decision is
-recorded in [ADR 002](adr-002-rust-build-standard.md). The contract runs
+recorded in [ADR 002](adrs/adr-0002-rust-build-standard.md). The contract runs
 `make -n`, so a direct `cargo test` needs GNU make on the `PATH`. It fails when
 `make` is missing instead of skipping, so a missing tool cannot read as a pass.
 

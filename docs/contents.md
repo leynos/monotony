@@ -9,14 +9,14 @@ set.
   its public build and test commands.
 - [Developer guide](developers-guide.md) explains the local workflow and
   implementation tooling for contributors.
-- [ADR 002: Rust build standard](adr-002-rust-build-standard.md) records why
-  development builds use the fast flags while coverage and release builds stay
-  off them.
+- [ADR 002: Rust build standard](adrs/adr-0002-rust-build-standard.md) records
+  why development builds use the fast flags while coverage and release builds
+  stay off them.
 - [Repository layout](repository-layout.md) explains the generated project's
   top-level files, directories, and ownership boundaries.
 - [Clock design](clock-design.md) explains the clock abstraction and
   `test-util` feature boundary.
-- [ADR 001: main-owned coverage publication](adr-001-main-owned-coverage-publication.md)
+- [ADR 001: main-owned coverage publication](adrs/adr-0001-main-owned-coverage-publication.md)
   records why `main` owns the CodeScene upload and the coverage baseline, and
   what the publisher and its contract tests must hold.
 - [Documentation style guide](documentation-style-guide.md) defines the
