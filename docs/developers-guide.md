@@ -161,7 +161,7 @@ the shared manual clock only to observe and advance monotonic time.
 
 ## Tooling
 
-Development builds use Cranelift for debug code generation. On Linux targets,
+Development builds use LLVM, the default codegen backend. On Linux targets,
 `.cargo/config.toml` configures clang to link with `mold`. `make test-fast` is
 an alias for `make test`. Coverage generation uses `lld` because LLVM coverage
 tooling expects LLVM-compatible linker behaviour.
@@ -220,14 +220,17 @@ that no step installs a linker by hand.
 
 ### Cranelift
 
-Cranelift is the development-profile codegen backend. The full suite was
-measured under it on the pinned `nightly-2026-05-28` on 2026-09-28: all 175
-nextest tests and the doctests pass. Coverage selects LLVM explicitly
-(`CARGO_PROFILE_DEV_CODEGEN_BACKEND=llvm`), because instrumentation needs it,
-and release builds use the release profile, which Cranelift does not touch.
-Re-measure the whole suite on the next toolchain bump; if it fails, record the
-failing tests here as an exception and remove the backend from
-`.cargo/config.toml`.
+LLVM is the default codegen backend: the estate standard dropped Cranelift,
+with review due 14 May 2027 (see the
+[concordat decision record](https://github.com/leynos/concordat/blob/main/docs/adrs/adr-0004-cranelift-is-not-part-of-the-rust-build-standard.md)).
+The Cranelift selection in `.cargo/config.toml` is commented out; uncommenting
+it is a persistent opt-in and must come with `SELECTED = true` in
+`tests/build_standard_support/cranelift.rs`. For a one-off opt-in, pass
+`--config 'profile.dev.codegen-backend="cranelift"'`; Cranelift does not
+unwind, so no test may rely on a caught panic under it. An inherited
+`CARGO_PROFILE_*_CODEGEN_BACKEND` can still select it. Coverage selects LLVM
+explicitly (`CARGO_PROFILE_DEV_CODEGEN_BACKEND=llvm`), because instrumentation
+needs it, and release builds use the release profile.
 
 ## Development build footprint
 

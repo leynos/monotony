@@ -5,17 +5,18 @@
 # defaults for every development, test, lint and typecheck build. Cargo
 # auto-discovers this file, so a bare `cargo build` gets them too.
 #
-# The Cranelift codegen backend is the development-profile default (see
-# "Cranelift" in docs/developers-guide.md). Coverage selects LLVM explicitly,
-# since instrumentation needs it.
+# LLVM is the default codegen backend; the Cranelift selection is disabled
+# below (see "Cranelift" in docs/developers-guide.md). Coverage selects LLVM
+# explicitly, since instrumentation needs it.
 [unstable]
 codegen-backend = true
 # Dated nightlies from 2026-07-31 take the native Cargo key; raw rustc metadata
 # flags break build scripts and are not used.
 embed-metadata = false
 
-[profile.dev]
-codegen-backend = "cranelift"
+# Cranelift disabled estate-wide on 14 November 2026 (concordat ADR; review 14 May 2027). Uncomment to opt back in.
+# [profile.dev]
+# codegen-backend = "cranelift"
 
 # Cargo selects a single `rustflags` source rather than merging them: a
 # matching `[target.*]` table replaces `[build] rustflags` outright, and an
