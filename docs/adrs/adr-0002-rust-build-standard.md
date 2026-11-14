@@ -33,8 +33,9 @@ artefacts also need a baseline that the fast flags would disturb.
   and CI step that assigns `RUSTFLAGS` without them.
 - Restate the flags in each recipe and step, held by a contract test. This is
   the option taken.
-- Run coverage on the development backend. Cranelift does not emit the
-  instrumentation coverage needs, so the build would report nothing useful.
+- Run coverage on the development backend (when Cranelift was the default).
+  Cranelift does not emit the instrumentation coverage needs, so the build
+  would report nothing useful.
 
 ## Decision outcome
 
@@ -59,4 +60,5 @@ the workflows, so a flag lost through a recipe or workflow edit fails there.
   `.cargo/config.toml` selects `clang` explicitly, so `clang` is required there.
 - A change to a recipe or workflow step that assigns `RUSTFLAGS` must restate
   the flags, and the contract says which clause fails when it does not.
-- Re-measure the suite under Cranelift on the next toolchain bump.
+- Cranelift is opt-in only; the estate review of that decision is due on 14 May
+  2027, and no per-bump re-measurement is required meanwhile.
