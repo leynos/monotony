@@ -33,8 +33,9 @@ artefacts also need a baseline that the fast flags would disturb.
   and CI step that assigns `RUSTFLAGS` without them.
 - Restate the flags in each recipe and step, held by a contract test. This is
   the option taken.
-- Run coverage on the development backend. Cranelift does not emit the
-  instrumentation coverage needs, so the build would report nothing useful.
+- Run coverage on the development backend (when Cranelift was the default).
+  Cranelift does not emit the instrumentation coverage needs, so the build
+  would report nothing useful.
 
 ## Decision outcome
 
@@ -44,9 +45,10 @@ flags into each development recipe, keeping the caller's own `RUSTFLAGS`.
 Coverage assigns its own flags and ignores the caller's. The release recipe
 keeps the caller's flags and names neither fast flag, so it ships from the
 platform linker; a direct `cargo build --release` takes the configuration's
-flags unless `RUSTFLAGS` is assigned. Cranelift is the development-profile code
-generator, selected in `.cargo/config.toml`; coverage selects LLVM explicitly
-because instrumentation needs it.
+flags unless `RUSTFLAGS` is assigned. Cranelift was the development-profile
+code generator, selected in `.cargo/config.toml`; that selection was disabled
+on 14 November 2026 (the estate standard is LLVM, with review due 14 May 2027),
+and coverage selects LLVM explicitly because instrumentation needs it.
 
 `tests/build_standard_contract.rs` reads the Cargo configuration sources and
 the commands `make -n` prints for each target, and the `setup-rust` steps of
@@ -58,4 +60,5 @@ the workflows, so a flag lost through a recipe or workflow edit fails there.
   `.cargo/config.toml` selects `clang` explicitly, so `clang` is required there.
 - A change to a recipe or workflow step that assigns `RUSTFLAGS` must restate
   the flags, and the contract says which clause fails when it does not.
-- Re-measure the suite under Cranelift on the next toolchain bump.
+- Cranelift is opt-in only; the estate review of that decision is due on 14 May
+  2027, and no per-bump re-measurement is required meanwhile.

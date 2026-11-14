@@ -16,7 +16,7 @@ use super::{
 };
 
 /// Whether this repository selects Cranelift for the development profile.
-pub const SELECTED: bool = true;
+pub const SELECTED: bool = false;
 
 /// The component a toolchain must ship for the backend.
 const COMPONENT: &str = "rustc-codegen-cranelift-preview";
@@ -190,11 +190,15 @@ fn the_repository_selects_cranelift_as_recorded() -> Result<(), String> {
 /// Scenario: a repository that selects Cranelift.
 ///
 /// Invariant: the Cargo feature, the toolchain component and every Whitaker install are in place;
-/// a repository that does not select it has nothing to hold.
+/// a repository that does not select it still keeps the opt-in support in place.
 #[test]
 fn a_cranelift_repository_declares_everything_the_backend_needs() -> Result<(), String> {
     if !SELECTED {
-        return Ok(());
+        if !holds(CONFIG, "unstable", "codegen-backend", "true") {
+            return Err("[unstable] does not set codegen-backend = true".to_owned());
+        }
+        none_of(&toolchain_problems(TOOLCHAIN))?;
+        return none_of(&cranelift_workflow_problems());
     }
     none_of(&config_problems(CONFIG))?;
     none_of(&toolchain_problems(TOOLCHAIN))?;

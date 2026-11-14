@@ -242,7 +242,7 @@ observation.
 Monotony uses Rust 2024, a pinned nightly toolchain, strict lint settings, and
 documented library code.
 
-Development builds use Cranelift for debug code generation. On Linux targets,
+Development builds use LLVM, the default codegen backend. On Linux targets,
 `.cargo/config.toml` configures clang to link with `mold`, so install `mold`
 before building. Coverage generation uses `lld` because LLVM coverage tools
 expect LLVM-compatible linker behaviour.
@@ -294,6 +294,7 @@ artefact links with the platform linker. A bare `cargo build --release` takes
 the configuration's flags unless `RUSTFLAGS` is assigned, for example
 `RUSTFLAGS="" cargo build --release`.
 
-Cranelift is the development-profile code generator, selected in
-`.cargo/config.toml`; coverage selects LLVM explicitly because instrumentation
-needs it. See [ADR 002](adrs/adr-0002-rust-build-standard.md) for the reasoning.
+LLVM is the default code generator; the Cranelift selection in
+`.cargo/config.toml` is disabled. Coverage selects LLVM explicitly because
+instrumentation needs it. See [ADR 002](adrs/adr-0002-rust-build-standard.md)
+for the reasoning.
