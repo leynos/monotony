@@ -231,23 +231,26 @@ project:
     Whitaker receives it through `RUSTFLAGS`.
   - `make test` executes:
 
-    ```makefile
+    ```sh
     cargo fetch --locked
-    RUSTFLAGS="... -D warnings -Zthreads=8" cargo nextest run --all-targets --all-features
-    RUSTFLAGS="... -D warnings -Zthreads=8" cargo test --doc --workspace --all-features
+    RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }-D warnings -Zthreads=8 -Clink-arg=-fuse-ld=mold" \
+      cargo nextest run --all-targets --all-features
+    RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }-D warnings -Zthreads=8 -Clink-arg=-fuse-ld=mold" \
+      cargo test --doc --workspace --all-features
     ```
 
     fetching locked dependencies, then running the test suite with
     `cargo-nextest` when it is installed and falling back to `cargo test`
     otherwise, with Rust warnings denied. The all-target, all-feature defaults
-    come from `TEST_FLAGS`. It then runs the all-feature workspace doctests as
-    a separate `cargo test --doc` step, because nextest does not run them.
+    come from `TEST_FLAGS`. The `-Clink-arg=-fuse-ld=mold` flag applies on
+    Linux only. It then runs the all-feature workspace doctests as a separate
+    `cargo test --doc` step, because nextest does not run them.
   - The `build`, `typecheck`, `lint`, and `test` recipes append `-Zthreads=8`
     and, on Linux, `-Clink-arg=-fuse-ld=mold` to any inherited `RUSTFLAGS`
     rather than replacing it. The release build passes an inherited
-    `RUSTFLAGS` through unchanged, and coverage deliberately stays on LLVM and
-    the platform linker. `make test-fast` is an alias for `make test`, which
-    already links with `mold` on Linux.
+    `RUSTFLAGS` through unchanged. Coverage deliberately uses LLVM and `lld`
+    (`COVERAGE_LINKER_FLAGS`) instead of the standard flags. `make test-fast`
+    is an alias for `make test`, which already links with `mold` on Linux.
   - Use `make fmt` (`cargo +nightly fmt --all`, followed by `mdtablefix` and
     `markdownlint-cli2 --fix` on the Markdown files) to apply formatting fixes
     reported by the formatter check.
