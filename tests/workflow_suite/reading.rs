@@ -153,12 +153,18 @@ impl Segment<'_> {
             return arguments.get(script.checked_add(1)?..);
         }
         let (_, value_options, leading) = WRAPPERS.iter().find(|(wrapper, ..)| *wrapper == name)?;
+        let index = Self::options_width(arguments, value_options)?;
+        arguments.get(index.checked_add(*leading)?..)
+    }
+
+    /// Returns how many leading words are options; a value option takes two.
+    fn options_width(arguments: &[&str], value_options: &[&str]) -> Option<usize> {
         let mut index = 0_usize;
         while let Some(option) = arguments.get(index).filter(|word| word.starts_with('-')) {
             let width = if value_options.contains(option) { 2 } else { 1 };
             index = index.checked_add(width)?;
         }
-        arguments.get(index.checked_add(*leading)?..)
+        Some(index)
     }
 
     /// Returns `true` if the segment runs the suite.
