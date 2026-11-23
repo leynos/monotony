@@ -53,7 +53,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Setup Rust
-        uses: leynos/shared-actions/.github/actions/setup-rust@3551a0bf76fe47d0cc5ff632c7796a8ddb23717e
+        uses: leynos/shared-actions/.github/actions/setup-rust@43f856c5d807eb9c2c7e6bf59c6612c618988d85
         with:
           install-mold: 'true'
           expect-cache: any
@@ -62,7 +62,7 @@ jobs:
         # Tests start their own cargo offline; fetch once so none resolves cold.
         run: cargo fetch --locked
       - name: Test and Measure Coverage
-        uses: leynos/shared-actions/.github/actions/generate-coverage@3551a0bf76fe47d0cc5ff632c7796a8ddb23717e
+        uses: leynos/shared-actions/.github/actions/generate-coverage@43f856c5d807eb9c2c7e6bf59c6612c618988d85
         env:
           CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER: clang
           RUSTFLAGS: -C link-arg=-fuse-ld=lld
@@ -84,7 +84,7 @@ jobs:
         run: echo "available=${{ secrets.CS_ACCESS_TOKEN != '' }}" >> "$GITHUB_OUTPUT"
       - name: Upload coverage data to CodeScene
         if: ${{ steps.codescene-token.outputs.available == 'true' && github.ref == 'refs/heads/main' }}
-        uses: leynos/shared-actions/.github/actions/upload-codescene-coverage@3551a0bf76fe47d0cc5ff632c7796a8ddb23717e
+        uses: leynos/shared-actions/.github/actions/upload-codescene-coverage@43f856c5d807eb9c2c7e6bf59c6612c618988d85
         with:
           path: lcov.info
           format: lcov
