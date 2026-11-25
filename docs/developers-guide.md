@@ -57,9 +57,11 @@ starts, and to run the nested calls offline:
   builds with `WARM_FLAGS`, which is `CARGO_FLAGS` without `--all-targets`, so
   build options (features, profile, target) belong in `CARGO_FLAGS` and follow
   into the warm-up, while runner-only options and test filters in `TEST_FLAGS`
-  never reach it. It always runs the UI test, so a narrowed run such as
-  `make test TEST_FLAGS=--lib` still pays for it; run `cargo test --lib`
-  directly to skip it.
+  never reach it. A `TEST_FLAGS` override replaces the timed run's flags
+  wholesale, so one that changes the build shape needs the same options in
+  `CARGO_FLAGS` or `WARM_FLAGS`. It always runs the UI test, so a narrowed run
+  such as `make test TEST_FLAGS=--lib` still pays for it; run
+  `cargo test --lib` directly to skip it.
 - `ci.yml` and `coverage-main.yml` run `cargo fetch --locked` as an
   unconditional step before the coverage step, with no `|| true`.
 - The footprint contract sets `CARGO_NET_OFFLINE=true` on its `cargo` command,
