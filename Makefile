@@ -68,6 +68,11 @@ clean: ## Remove build artifacts
 
 test: ## Run tests with warnings treated as errors
 	$(CARGO) fetch --locked
+	# Pay for the nested builds before the timed run: build the test binaries under
+	# the run's own flags, then run the trybuild binary once, because a plain
+	# `--no-run` leaves trybuild's own build tree (<target>/tests/trybuild) empty.
+	RUSTFLAGS="$${RUSTFLAGS:+$$RUSTFLAGS }$(RUST_FLAGS) $(STANDARD_RUSTFLAGS)" $(CARGO) $(TEST_CMD) --no-run $(TEST_FLAGS) $(BUILD_JOBS)
+	RUSTFLAGS="$${RUSTFLAGS:+$$RUSTFLAGS }$(RUST_FLAGS) $(STANDARD_RUSTFLAGS)" $(CARGO) test --all-features --test compile_time $(BUILD_JOBS)
 	RUSTFLAGS="$${RUSTFLAGS:+$$RUSTFLAGS }$(RUST_FLAGS) $(STANDARD_RUSTFLAGS)" $(CARGO) $(TEST_CMD) $(TEST_FLAGS) $(BUILD_JOBS)
 	RUSTFLAGS="$${RUSTFLAGS:+$$RUSTFLAGS }$(RUST_FLAGS) $(STANDARD_RUSTFLAGS)" $(CARGO) test --doc --workspace --all-features
 
