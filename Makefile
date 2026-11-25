@@ -17,11 +17,12 @@ RUSTDOC_FLAGS := -D warnings $(RUSTDOC_FLAGS)
 CARGO_FLAGS ?= --all-targets --all-features
 CLIPPY_FLAGS ?= $(CARGO_FLAGS) -- $(RUST_FLAGS)
 TEST_FLAGS ?= $(CARGO_FLAGS)
-# The build-affecting words of TEST_FLAGS (features, profile, target), which the
-# nested-build warm-up shares with the timed run. Runner-only and selection
-# options (`-E`, `--no-fail-fast`, a test name, `--`) stay out: they would fail
-# the warm-up or select nothing. Write `--features=NAME`, not `--features NAME`.
-WARM_FLAGS ?= $(filter --all-features --no-default-features --release --features=% --target=%,$(TEST_FLAGS))
+# What the nested-build warm-up builds with: CARGO_FLAGS, the build shape every
+# cargo gate here shares (features, profile, target), without `--all-targets`,
+# which would select every test target. Build options belong in CARGO_FLAGS.
+# TEST_FLAGS only selects tests (`-E`, `--no-fail-fast`, a name, `--`), and a
+# selection must not reach the warm-up: it would fail it or select nothing.
+WARM_FLAGS ?= $(filter-out --all-targets,$(CARGO_FLAGS))
 TEST_CMD := $(if $(shell $(CARGO) nextest --version 2>/dev/null),nextest run,test)
 COVERAGE_LINKER_FLAGS ?= -fuse-ld=lld
 COVERAGE_RUST_FLAGS ?= $(RUST_FLAGS) -C link-arg=$(COVERAGE_LINKER_FLAGS)

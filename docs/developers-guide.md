@@ -54,11 +54,12 @@ starts, and to run the nested calls offline:
   `compile_time` once, because `--no-run` leaves `trybuild`'s own build tree
   (`target/tests/trybuild`) empty. On a cold target the warm-up costs about 27
   s; the timed `compile_time` tests then take about 1 s and 2.5 s. The warm-up
-  takes the build-affecting words of `TEST_FLAGS` (features, profile, target)
-  through `WARM_FLAGS`, so runner-only options and test filters never reach it;
-  write `--features=NAME`, not `--features NAME`. It always runs the UI test,
-  so a narrowed run such as `make test TEST_FLAGS=--lib` still pays for it; run
-  `cargo test --lib` directly to skip it.
+  builds with `WARM_FLAGS`, which is `CARGO_FLAGS` without `--all-targets`, so
+  build options (features, profile, target) belong in `CARGO_FLAGS` and follow
+  into the warm-up, while runner-only options and test filters in `TEST_FLAGS`
+  never reach it. It always runs the UI test, so a narrowed run such as
+  `make test TEST_FLAGS=--lib` still pays for it; run `cargo test --lib`
+  directly to skip it.
 - `ci.yml` and `coverage-main.yml` run `cargo fetch --locked` as an
   unconditional step before the coverage step, with no `|| true`.
 - The footprint contract sets `CARGO_NET_OFFLINE=true` on its `cargo` command,
