@@ -17,6 +17,11 @@ RUSTDOC_FLAGS := -D warnings $(RUSTDOC_FLAGS)
 CARGO_FLAGS ?= --all-targets --all-features
 CLIPPY_FLAGS ?= $(CARGO_FLAGS) -- $(RUST_FLAGS)
 TEST_FLAGS ?= $(CARGO_FLAGS)
+# The build-affecting words of TEST_FLAGS (features, profile, target), which the
+# nested-build warm-up shares with the timed run. Runner-only and selection
+# options (`-E`, `--no-fail-fast`, a test name, `--`) stay out: they would fail
+# the warm-up or select nothing. Write `--features=NAME`, not `--features NAME`.
+WARM_FLAGS ?= $(filter --all-features --no-default-features --release --features=% --target=%,$(TEST_FLAGS))
 TEST_CMD := $(if $(shell $(CARGO) nextest --version 2>/dev/null),nextest run,test)
 COVERAGE_LINKER_FLAGS ?= -fuse-ld=lld
 COVERAGE_RUST_FLAGS ?= $(RUST_FLAGS) -C link-arg=$(COVERAGE_LINKER_FLAGS)
@@ -71,8 +76,8 @@ test: ## Run tests with warnings treated as errors
 	# Pay for the nested builds before the timed run: build the test binaries under
 	# the run's own flags, then run the trybuild binary once, because a plain
 	# `--no-run` leaves trybuild's own build tree (<target>/tests/trybuild) empty.
-	RUSTFLAGS="$${RUSTFLAGS:+$$RUSTFLAGS }$(RUST_FLAGS) $(STANDARD_RUSTFLAGS)" $(CARGO) $(TEST_CMD) --no-run $(TEST_FLAGS) $(BUILD_JOBS)
-	RUSTFLAGS="$${RUSTFLAGS:+$$RUSTFLAGS }$(RUST_FLAGS) $(STANDARD_RUSTFLAGS)" $(CARGO) $(TEST_CMD) --test compile_time $(filter-out --all-targets,$(TEST_FLAGS)) $(BUILD_JOBS)
+	RUSTFLAGS="$${RUSTFLAGS:+$$RUSTFLAGS }$(RUST_FLAGS) $(STANDARD_RUSTFLAGS)" $(CARGO) test --no-run --all-targets $(WARM_FLAGS) $(BUILD_JOBS)
+	RUSTFLAGS="$${RUSTFLAGS:+$$RUSTFLAGS }$(RUST_FLAGS) $(STANDARD_RUSTFLAGS)" $(CARGO) test --test compile_time $(WARM_FLAGS) $(BUILD_JOBS)
 	RUSTFLAGS="$${RUSTFLAGS:+$$RUSTFLAGS }$(RUST_FLAGS) $(STANDARD_RUSTFLAGS)" $(CARGO) $(TEST_CMD) $(TEST_FLAGS) $(BUILD_JOBS)
 	RUSTFLAGS="$${RUSTFLAGS:+$$RUSTFLAGS }$(RUST_FLAGS) $(STANDARD_RUSTFLAGS)" $(CARGO) test --doc --workspace --all-features
 
